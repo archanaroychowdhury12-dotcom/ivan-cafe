@@ -14,7 +14,7 @@ import type {
 import { seedDB } from './seed';
 import { orderCode, uid } from './format';
 
-const KEY = 'ivan-food-court-db-v7';
+const KEY = 'ivan-food-court-db-v8';
 const CHANNEL = 'ivan-food-court-sync';
 
 let db: DB = load();
@@ -59,7 +59,7 @@ function load(): DB {
       return fresh;
     }
     const parsed = JSON.parse(raw) as DB;
-    if (!parsed || parsed.version !== 7 || !Array.isArray(parsed.items)) {
+    if (!parsed || parsed.version !== 8 || !Array.isArray(parsed.items)) {
       const fresh = seedDB();
       localStorage.setItem(KEY, JSON.stringify(fresh));
       return fresh;

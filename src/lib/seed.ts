@@ -147,16 +147,16 @@ export const seedTables: CafeTable[] = [
 
 export function seedDB(): DB {
   return {
-    version: 7,
+    version: 8,
     settings: {
-      cafeName: 'Ivan Food Court',
+      cafeName: 'Ivan Caffe',
       tagline: 'GOOD FOOD · GOOD MOOD',
       currency: '₹',
       taxPercent: 5,
       servicePercent: 5,
       serviceEnabled: true,
       acceptingOrders: true,
-      address: 'Ivan Food Court, Main Road',
+      address: 'Ivan Caffe, Main Road',
       hours: '09:00 — 23:00 · Every day',
       adminUser: 'admin',
       adminPassHash: DEFAULT_PASS_HASH,

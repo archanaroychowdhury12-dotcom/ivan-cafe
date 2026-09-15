@@ -225,12 +225,20 @@ export default function MenuPage() {
             <MenuIcon size={20} strokeWidth={2.2} />
           </button>
 
-          {/* Center Brand Title */}
+          {/* Center Brand Title - Styled exactly like media_1789455970200.png */}
           <div className="text-center min-w-0 flex-1">
-            <h1 className="font-editorial text-[18px] sm:text-[20px] font-bold tracking-wider text-[#FEEFE2] uppercase leading-tight truncate">
-              {settings.cafeName}
-            </h1>
-            <p className="text-[9px] font-semibold tracking-[0.2em] text-[#D8B99A] uppercase mt-0.5">
+            <div className="flex items-center justify-center gap-1.5 leading-none">
+              <span className="font-editorial text-[19px] sm:text-[21px] font-black tracking-wider text-[#FFB3C1] drop-shadow-[0_0_10px_rgba(255,179,193,0.55)]">
+                IVAN
+              </span>
+              <span className="text-amber-300 text-[18px] filter drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
+                ☕
+              </span>
+              <span className="font-editorial text-[19px] sm:text-[21px] font-black tracking-wider text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.45)]">
+                CAFFE
+              </span>
+            </div>
+            <p className="text-[9px] font-bold tracking-[0.24em] text-[#D8B99A] uppercase mt-1">
               — GOOD FOOD · GOOD MOOD —
             </p>
           </div>
@@ -241,11 +249,11 @@ export default function MenuPage() {
             <button
               type="button"
               onClick={() => setCallOpen(true)}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-stone-950 px-3.5 py-2.5 shadow-lg shadow-amber-500/30 border border-amber-300 transition active:scale-95 ring-2 ring-amber-400/30"
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-stone-950 px-3 py-2 shadow-lg shadow-amber-500/30 border border-amber-300 transition active:scale-95 ring-2 ring-amber-400/30"
               title="Call staff or waiter to your table"
             >
-              <BellRing size={18} className="text-stone-950 fill-stone-950/25 animate-bounce shrink-0" />
-              <span className="text-[13px] font-black tracking-wide uppercase leading-none">Call Staff</span>
+              <BellRing size={17} className="text-stone-950 fill-stone-950/25 animate-bounce shrink-0" />
+              <span className="text-[12px] font-black tracking-wide uppercase leading-none">Call Staff</span>
             </button>
 
             {/* Table Selection Badge */}
@@ -267,42 +275,44 @@ export default function MenuPage() {
           </div>
         </div>
 
-        {/* Hero Banner Content: Chicken Snacks Platter (Exact Match to Reference Design) */}
-        <div className="relative z-10 mt-5 grid grid-cols-12 items-center gap-2">
-          {/* Left Text: Chicken Snacks in Cursive Script */}
-          <div className="col-span-7 space-y-1 pl-1">
-            <h2 className="font-hand leading-[0.92] tracking-normal text-left">
-              <span className="block text-[42px] sm:text-[48px] font-bold text-[#FFFDF8] drop-shadow-sm">
-                Chicken
+        {/* Hero Banner Content: Good Food Good Mood (Exact Match to media_1789455970200.png) */}
+        <div className="relative z-10 mt-6 grid grid-cols-12 items-center gap-2">
+          {/* Left Text with Flourishes */}
+          <div className="col-span-6 space-y-1 pl-1">
+            <div className="flex items-center justify-between pr-4">
+              <span className="text-amber-400 text-lg font-hand leading-none select-none">୧୨</span>
+              <span className="text-amber-400 text-lg font-hand leading-none select-none">୨୧</span>
+            </div>
+
+            <h2 className="font-hand leading-[1.02] tracking-normal text-left my-0.5">
+              <span className="block text-[38px] sm:text-[44px] font-bold text-white drop-shadow-md">
+                Good Food
               </span>
-              <span className="block text-[46px] sm:text-[54px] font-extrabold text-[#F3C06B] drop-shadow-sm -mt-2">
-                Snacks
+              <span className="block text-[42px] sm:text-[48px] font-extrabold text-[#F3C06B] drop-shadow-md -mt-1">
+                Good Mood
               </span>
             </h2>
-            <div className="flex items-center gap-1.5 pt-1 text-[#E2D6C6]">
-              <p className="text-[9.5px] sm:text-[10.5px] font-bold uppercase tracking-[0.16em]">
-                CRISPY &bull; TASTY &bull; ALWAYS A GOOD IDEA
-              </p>
-              <span className="text-amber-400 text-xs">✦</span>
+
+            <div className="flex items-center justify-between pr-4">
+              <span className="text-amber-400 text-lg font-hand leading-none select-none">୨୧</span>
+              <span className="text-amber-400 text-lg font-hand leading-none select-none">୨୧</span>
             </div>
+
+            <p className="text-[11px] sm:text-[12px] font-medium text-stone-300/90 pt-1 tracking-wide leading-tight">
+              Fresh food &bull; Great coffee &bull; Cozy vibes
+            </p>
           </div>
 
-          {/* Right Image: Crispy Golden Chicken Snacks with Dip */}
-          <div className="col-span-5 flex flex-col items-center justify-end relative">
-            {/* "Freshly Made ⤵" cursive tag */}
-            <div className="self-end mr-3 -mb-1.5 z-10 flex items-center gap-1 text-[#FFFDF8] font-hand text-[15px] sm:text-[17px] font-bold rotate-[-6deg] drop-shadow-md">
-              <span>Freshly</span>
-              <span className="text-amber-300">Made</span>
-              <span className="text-[18px] text-amber-200">⤵</span>
-            </div>
-
-            <div className="relative w-full max-w-[165px] sm:max-w-[190px] overflow-hidden rounded-[22px] shadow-2xl border border-white/15 bg-stone-900">
+          {/* Right Image: Signature Latte Cup with Heart Latte Art */}
+          <div className="col-span-6 flex justify-end relative">
+            <div className="relative w-full max-w-[210px] overflow-hidden rounded-2xl shadow-2xl">
               <img
-                src="/brand/chicken_snacks_hero.jpg"
-                alt="Signature Crispy Chicken Snacks"
-                className="w-full h-[120px] sm:h-[135px] object-cover scale-105"
+                src="/brand/hero_coffee_exact.jpg"
+                alt="Signature Coffee with Heart Latte Art"
+                className="w-full h-auto object-cover scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/40 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#17110D] to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#17110D]/70 to-transparent pointer-events-none" />
             </div>
           </div>
         </div>
