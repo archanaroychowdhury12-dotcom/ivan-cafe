@@ -167,7 +167,7 @@ export default function Landing() {
                 className="group flex flex-col items-center gap-2 rounded-[24px] border border-line bg-cream/50 p-4 transition hover:-translate-y-1 hover:border-ember hover:bg-paper hover:shadow-lift"
               >
                 <div className="rounded-2xl bg-paper p-2 shadow-card">
-                  <QRImage value={`${origin}/menu?table=${t.code}`} size={110} />
+                  <QRImage value={getLiveMenuUrl(t.code, settings.customDomain)} size={110} />
                 </div>
                 <p className="font-display text-[17px] font-semibold">{t.code}</p>
                 <p className="-mt-1 text-[11px] text-mocha">{t.label}</p>

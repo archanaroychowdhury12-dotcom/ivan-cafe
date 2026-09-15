@@ -27,9 +27,9 @@ const MODES: { id: Order['paymentMode']; label: string; icon: typeof Banknote; h
   },
   {
     id: 'UPI',
-    label: 'UPI / QR Code',
+    label: 'UPI / PhonePe QR',
     icon: Smartphone,
-    hint: 'Scan QR at table anytime during or after meal',
+    hint: 'Scan QR at table anytime (UPI: Q438109503@ybl)',
   },
   {
     id: 'CARD',

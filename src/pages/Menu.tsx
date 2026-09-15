@@ -32,7 +32,7 @@ import { ItemSheet } from '../components/customer/ItemSheet';
 import { BottomNav } from '../components/customer/BottomNav';
 import { Button, Chip, EmptyState, Sheet, useToast } from '../components/ui';
 import { Mark } from '../components/Brand';
-import { blip } from '../lib/sound';
+import { blip, formatTableSpeech, playStaffCallAlert } from '../lib/sound';
 
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
@@ -157,6 +157,12 @@ export default function MenuPage() {
   const [callNote, setCallNote] = useState('');
   const [diningMode, setDiningMode] = useState<'Dine-in' | 'Takeaway'>('Dine-in');
 
+  const handleCallStaff = (selectedReason: CallReason = 'Assistance', note?: string) => {
+    actions.callStaff(table.code, selectedReason, note);
+    const spoken = formatTableSpeech(table.code);
+    toast(`🔔 Staff alerted for ${spoken} (${selectedReason}) — someone is on the way!`, 'info');
+  };
+
   const liveOrders = orders.filter(
     (o) => o.tableCode === table.code && o.status !== 'SERVED' && o.status !== 'CANCELLED',
   );
@@ -266,8 +272,11 @@ export default function MenuPage() {
             {/* CALL STAFF BUTTON - EXTRA PROMINENT & EYE-CATCHING */}
             <button
               type="button"
-              onClick={() => setCallOpen(true)}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-stone-950 px-3 py-2 shadow-lg shadow-amber-500/30 border border-amber-300 transition active:scale-95 ring-2 ring-amber-400/30"
+              onClick={() => {
+                handleCallStaff('Assistance');
+                setCallOpen(true);
+              }}
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-stone-950 px-3 py-2 shadow-lg shadow-amber-500/30 border border-amber-300 transition active:scale-95 ring-2 ring-amber-400/30 cursor-pointer"
               title="Call staff or waiter to your table"
             >
               <BellRing size={17} className="text-stone-950 fill-stone-950/25 animate-bounce shrink-0" />

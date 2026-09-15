@@ -29,6 +29,7 @@ import {
   mapTableToDb,
   supabase,
 } from './supabase';
+import { playStaffCallAlert } from './sound';
 
 const KEY = 'ivan-food-court-db-v10';
 const CHANNEL = 'ivan-food-court-sync';
@@ -541,6 +542,12 @@ export const actions = {
   },
 
   callStaff(tableCode: string, reason: CallReason, note?: string) {
+    try {
+      playStaffCallAlert(tableCode);
+    } catch {
+      /* ignore audio errors */
+    }
+
     const call: StaffCall = {
       id: uid('c_'),
       tableCode,
