@@ -57,6 +57,12 @@ const getCategoryIcon = (id: string) => {
       return UtensilsCrossed;
     case 'c-soups':
       return Soup;
+    case 'c-lassi':
+      return CupSoda;
+    case 'c-mocktails':
+      return GlassWater;
+    case 'c-egg-lolly':
+      return ChefHat;
     default:
       return Utensils;
   }
@@ -65,11 +71,11 @@ const getCategoryIcon = (id: string) => {
 const getCategoryHeaderIcon = (id: string, emoji?: string) => {
   switch (id) {
     case 'c-chicken-snacks':
-      return '🍟';
+      return '🍗';
     case 'c-coffee':
       return '☕';
     case 'c-tea':
-      return '🍃';
+      return '🍵';
     case 'c-shawarma':
       return '🌯';
     case 'c-starters':
@@ -79,7 +85,13 @@ const getCategoryHeaderIcon = (id: string, emoji?: string) => {
     case 'c-rice':
       return '🍚';
     case 'c-soups':
-      return '🥣';
+      return '🍲';
+    case 'c-lassi':
+      return '🥤';
+    case 'c-mocktails':
+      return '🍹';
+    case 'c-egg-lolly':
+      return '🍳';
     default:
       return emoji || '🍽️';
   }
@@ -103,6 +115,12 @@ const getCategorySubtitle = (id: string) => {
       return 'Fragrant garlic & fried rice seasoned to perfection';
     case 'c-soups':
       return 'Comforting, steaming bowls with crispy fried noodles';
+    case 'c-lassi':
+      return 'Thick, creamy traditional yogurt blends with rich nuts';
+    case 'c-mocktails':
+      return 'Chilled sparkling refreshments & colorful fruit fusions';
+    case 'c-egg-lolly':
+      return 'Crispy seasoned egg skewers fried to golden crunch';
     default:
       return 'Freshly prepared, hot & delicious for your table';
   }

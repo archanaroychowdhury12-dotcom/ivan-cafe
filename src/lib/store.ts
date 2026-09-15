@@ -13,6 +13,22 @@ import type {
 } from './types';
 import { seedDB } from './seed';
 import { orderCode, uid } from './format';
+import {
+  isSupabaseConfigured,
+  mapCallFromDb,
+  mapCallToDb,
+  mapCategoryFromDb,
+  mapCategoryToDb,
+  mapItemFromDb,
+  mapItemToDb,
+  mapOrderFromDb,
+  mapOrderToDb,
+  mapSettingsFromDb,
+  mapSettingsToDb,
+  mapTableFromDb,
+  mapTableToDb,
+  supabase,
+} from './supabase';
 
 const KEY = 'ivan-food-court-db-v8';
 const CHANNEL = 'ivan-food-court-sync';
@@ -20,6 +36,22 @@ const CHANNEL = 'ivan-food-court-sync';
 let db: DB = load();
 const listeners = new Set<() => void>();
 let bc: BroadcastChannel | null = null;
+
+export interface SyncStatus {
+  isConfigured: boolean;
+  connected: boolean;
+  syncing: boolean;
+  lastSyncAt: number | null;
+  error: string | null;
+}
+
+let syncStatus: SyncStatus = {
+  isConfigured: isSupabaseConfigured,
+  connected: false,
+  syncing: false,
+  lastSyncAt: null,
+  error: null,
+};
 
 /**
  * Derived snapshot — rebuilt only when the database actually changes so that
@@ -33,6 +65,7 @@ export interface Snapshot {
   tables: CafeTable[];
   orders: Order[];
   calls: StaffCall[];
+  syncStatus: SyncStatus;
 }
 
 function build(d: DB): Snapshot {
@@ -44,6 +77,7 @@ function build(d: DB): Snapshot {
     tables: d.tables,
     orders: [...d.orders].sort((a, b) => b.createdAt - a.createdAt),
     calls: [...d.calls].sort((a, b) => b.createdAt - a.createdAt),
+    syncStatus: { ...syncStatus },
   };
 }
 
@@ -91,6 +125,272 @@ function persist(broadcast = true) {
   emit();
 }
 
+function updateSyncStatus(patch: Partial<SyncStatus>) {
+  syncStatus = { ...syncStatus, ...patch };
+  emit();
+}
+
+function mutate(fn: (draft: DB) => void) {
+  const draft: DB = JSON.parse(JSON.stringify(db));
+  fn(draft);
+  db = draft;
+  persist();
+}
+
+/* --------------------------------- Supabase Sync --------------------------------- */
+
+async function seedSupabaseIfEmpty() {
+  if (!supabase) return;
+  try {
+    const { data: catCheck, error: catErr } = await supabase.from('categories').select('id').limit(1);
+    if (catErr) {
+      console.warn('Supabase categories check error:', catErr);
+      return;
+    }
+
+    if (!catCheck || catCheck.length === 0) {
+      console.log('Supabase is empty. Seeding initial categories, items, tables, and settings...');
+      // Seed categories
+      await supabase.from('categories').upsert(db.categories.map(mapCategoryToDb));
+      // Seed items
+      await supabase.from('menu_items').upsert(db.items.map(mapItemToDb));
+      // Seed tables
+      await supabase.from('cafe_tables').upsert(db.tables.map(mapTableToDb));
+      // Seed settings
+      await supabase.from('settings').upsert(mapSettingsToDb(db.settings));
+    }
+  } catch (err: any) {
+    console.error('Failed to auto-seed Supabase:', err);
+  }
+}
+
+async function fetchFromSupabase() {
+  if (!supabase) return;
+  updateSyncStatus({ syncing: true, error: null });
+
+  try {
+    // 1. Categories
+    const { data: categoriesData, error: catError } = await supabase.from('categories').select('*');
+    if (catError) throw catError;
+
+    // 2. Menu Items
+    const { data: itemsData, error: itemsError } = await supabase.from('menu_items').select('*');
+    if (itemsError) throw itemsError;
+
+    // 3. Tables
+    const { data: tablesData, error: tablesError } = await supabase.from('cafe_tables').select('*');
+    if (tablesError) throw tablesError;
+
+    // 4. Orders
+    const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*');
+    if (ordersError) throw ordersError;
+
+    // 5. Staff Calls
+    const { data: callsData, error: callsError } = await supabase.from('staff_calls').select('*');
+    if (callsError) throw callsError;
+
+    // 6. Settings
+    const { data: settingsData, error: settingsError } = await supabase
+      .from('settings')
+      .select('*')
+      .eq('id', 'default')
+      .maybeSingle();
+    if (settingsError) throw settingsError;
+
+    // If categories and items are empty, trigger auto seed
+    if ((!categoriesData || categoriesData.length === 0) && (!itemsData || itemsData.length === 0)) {
+      await seedSupabaseIfEmpty();
+      return;
+    }
+
+    // Merge into memory
+    const remoteCategories = categoriesData ? categoriesData.map(mapCategoryFromDb) : db.categories;
+    const remoteItems = itemsData ? itemsData.map(mapItemFromDb) : db.items;
+    const remoteTables = tablesData ? tablesData.map(mapTableFromDb) : db.tables;
+    const remoteOrders = ordersData ? ordersData.map(mapOrderFromDb) : db.orders;
+    const remoteCalls = callsData ? callsData.map(mapCallFromDb) : db.calls;
+    const remoteSettings = settingsData ? mapSettingsFromDb(settingsData, db.settings) : db.settings;
+
+    db = {
+      version: 8,
+      categories: remoteCategories,
+      items: remoteItems,
+      tables: remoteTables,
+      orders: remoteOrders,
+      calls: remoteCalls,
+      settings: remoteSettings,
+    };
+
+    persist(false);
+    updateSyncStatus({
+      connected: true,
+      syncing: false,
+      lastSyncAt: Date.now(),
+      error: null,
+    });
+  } catch (err: any) {
+    console.warn('Supabase sync warning:', err.message || err);
+    updateSyncStatus({
+      connected: false,
+      syncing: false,
+      error: err.message || 'Could not connect to Supabase database.',
+    });
+  }
+}
+
+function initSupabaseRealtime() {
+  if (!supabase) return;
+
+  // Initial fetch
+  fetchFromSupabase();
+
+  // Subscribe to table changes
+  const channel = supabase
+    .channel('food-court-db-changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'orders' },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newOrder = mapOrderFromDb(payload.new);
+          mutate((d) => {
+            if (!d.orders.some((o) => o.id === newOrder.id)) {
+              d.orders.unshift(newOrder);
+            }
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = mapOrderFromDb(payload.new);
+          mutate((d) => {
+            const idx = d.orders.findIndex((o) => o.id === updated.id);
+            if (idx >= 0) d.orders[idx] = updated;
+            else d.orders.unshift(updated);
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if (oldId) {
+            mutate((d) => {
+              d.orders = d.orders.filter((o) => o.id !== oldId);
+            });
+          }
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'staff_calls' },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newCall = mapCallFromDb(payload.new);
+          mutate((d) => {
+            if (!d.calls.some((c) => c.id === newCall.id)) {
+              d.calls.unshift(newCall);
+            }
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = mapCallFromDb(payload.new);
+          mutate((d) => {
+            const idx = d.calls.findIndex((c) => c.id === updated.id);
+            if (idx >= 0) d.calls[idx] = updated;
+            else d.calls.unshift(updated);
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if (oldId) {
+            mutate((d) => {
+              d.calls = d.calls.filter((c) => c.id !== oldId);
+            });
+          }
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'menu_items' },
+      (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const item = mapItemFromDb(payload.new);
+          mutate((d) => {
+            const idx = d.items.findIndex((i) => i.id === item.id);
+            if (idx >= 0) d.items[idx] = item;
+            else d.items.push(item);
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if (oldId) {
+            mutate((d) => {
+              d.items = d.items.filter((i) => i.id !== oldId);
+            });
+          }
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'categories' },
+      (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const cat = mapCategoryFromDb(payload.new);
+          mutate((d) => {
+            const idx = d.categories.findIndex((c) => c.id === cat.id);
+            if (idx >= 0) d.categories[idx] = cat;
+            else d.categories.push(cat);
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if (oldId) {
+            mutate((d) => {
+              d.categories = d.categories.filter((c) => c.id !== oldId);
+            });
+          }
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'cafe_tables' },
+      (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const table = mapTableFromDb(payload.new);
+          mutate((d) => {
+            const idx = d.tables.findIndex((t) => t.id === table.id);
+            if (idx >= 0) d.tables[idx] = table;
+            else d.tables.push(table);
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = payload.old?.id;
+          if (oldId) {
+            mutate((d) => {
+              d.tables = d.tables.filter((t) => t.id !== oldId);
+            });
+          }
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'settings' },
+      (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const s = mapSettingsFromDb(payload.new, db.settings);
+          mutate((d) => {
+            d.settings = s;
+          });
+        }
+      },
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        updateSyncStatus({ connected: true });
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        updateSyncStatus({ connected: false });
+      }
+    });
+
+  return () => {
+    supabase?.removeChannel(channel);
+  };
+}
+
 if (typeof window !== 'undefined') {
   try {
     bc = new BroadcastChannel(CHANNEL);
@@ -101,19 +401,17 @@ if (typeof window !== 'undefined') {
   } catch {
     bc = null;
   }
+
   window.addEventListener('storage', (e) => {
     if (e.key === KEY) {
       db = load();
       emit();
     }
   });
-}
 
-function mutate(fn: (draft: DB) => void) {
-  const draft: DB = JSON.parse(JSON.stringify(db));
-  fn(draft);
-  db = draft;
-  persist();
+  if (isSupabaseConfigured) {
+    initSupabaseRealtime();
+  }
 }
 
 export function subscribe(cb: () => void) {
@@ -136,6 +434,7 @@ const selItems = (s: Snapshot) => s.items;
 const selTables = (s: Snapshot) => s.tables;
 const selOrders = (s: Snapshot) => s.orders;
 const selCalls = (s: Snapshot) => s.calls;
+const selSyncStatus = (s: Snapshot) => s.syncStatus;
 
 export const useSettings = () => useDB(selSettings);
 export const useCategories = () => useDB(selCategories);
@@ -143,6 +442,7 @@ export const useItems = () => useDB(selItems);
 export const useTables = () => useDB(selTables);
 export const useOrders = () => useDB(selOrders);
 export const useCalls = () => useDB(selCalls);
+export const useSyncStatus = () => useDB(selSyncStatus);
 
 export function useOrder(id?: string) {
   const sel = useCallback((s: Snapshot) => s.orders.find((o) => o.id === id || o.code === id), [id]);
@@ -166,6 +466,10 @@ export function priceOrder(lines: CartLine[], s: Settings) {
 /* --------------------------------- actions -------------------------------- */
 
 export const actions = {
+  syncWithSupabase() {
+    return fetchFromSupabase();
+  },
+
   placeOrder(input: {
     tableCode: string;
     lines: CartLine[];
@@ -197,27 +501,67 @@ export const actions = {
       ],
       paymentMode: input.paymentMode,
     };
+
     mutate((d) => {
       d.orders.push(order);
     });
+
+    if (supabase) {
+      supabase
+        .from('orders')
+        .insert(mapOrderToDb(order))
+        .then(({ error }) => {
+          if (error) console.error('Supabase placeOrder error:', error);
+        });
+    }
+
     return order;
   },
 
   setOrderStatus(id: string, status: OrderStatus, by = 'Staff') {
+    let updatedOrder: Order | undefined;
     mutate((d) => {
       const o = d.orders.find((x) => x.id === id);
       if (!o) return;
       o.status = status;
       o.updatedAt = Date.now();
       o.timeline.push({ status, at: Date.now(), by });
+      updatedOrder = o;
     });
+
+    if (supabase && updatedOrder) {
+      supabase
+        .from('orders')
+        .update(mapOrderToDb(updatedOrder))
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Supabase setOrderStatus error:', error);
+        });
+    }
   },
 
   callStaff(tableCode: string, reason: CallReason, note?: string) {
-    const call = { id: uid('c_'), tableCode, reason, note, createdAt: Date.now(), resolved: false };
+    const call: StaffCall = {
+      id: uid('c_'),
+      tableCode,
+      reason,
+      note,
+      createdAt: Date.now(),
+      resolved: false,
+    };
     mutate((d) => {
       d.calls.push(call);
     });
+
+    if (supabase) {
+      supabase
+        .from('staff_calls')
+        .insert(mapCallToDb(call))
+        .then(({ error }) => {
+          if (error) console.error('Supabase callStaff error:', error);
+        });
+    }
+
     return call;
   },
 
@@ -226,6 +570,16 @@ export const actions = {
       const c = d.calls.find((x) => x.id === id);
       if (c) c.resolved = true;
     });
+
+    if (supabase) {
+      supabase
+        .from('staff_calls')
+        .update({ resolved: true })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Supabase resolveCall error:', error);
+        });
+    }
   },
 
   saveItem(item: MenuItem) {
@@ -234,19 +588,52 @@ export const actions = {
       if (i >= 0) d.items[i] = item;
       else d.items.unshift(item);
     });
+
+    if (supabase) {
+      supabase
+        .from('menu_items')
+        .upsert(mapItemToDb(item))
+        .then(({ error }) => {
+          if (error) console.error('Supabase saveItem error:', error);
+        });
+    }
   },
 
   deleteItem(id: string) {
     mutate((d) => {
       d.items = d.items.filter((x) => x.id !== id);
     });
+
+    if (supabase) {
+      supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Supabase deleteItem error:', error);
+        });
+    }
   },
 
   toggleSoldOut(id: string) {
+    let soldOutState = false;
     mutate((d) => {
       const it = d.items.find((x) => x.id === id);
-      if (it) it.soldOut = !it.soldOut;
+      if (it) {
+        it.soldOut = !it.soldOut;
+        soldOutState = it.soldOut;
+      }
     });
+
+    if (supabase) {
+      supabase
+        .from('menu_items')
+        .update({ sold_out: soldOutState })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Supabase toggleSoldOut error:', error);
+        });
+    }
   },
 
   saveCategory(cat: Category) {
@@ -255,6 +642,15 @@ export const actions = {
       if (i >= 0) d.categories[i] = cat;
       else d.categories.push(cat);
     });
+
+    if (supabase) {
+      supabase
+        .from('categories')
+        .upsert(mapCategoryToDb(cat))
+        .then(({ error }) => {
+          if (error) console.error('Supabase saveCategory error:', error);
+        });
+    }
   },
 
   deleteCategory(id: string) {
@@ -262,6 +658,16 @@ export const actions = {
       d.categories = d.categories.filter((c) => c.id !== id);
       d.items = d.items.filter((i) => i.categoryId !== id);
     });
+
+    if (supabase) {
+      supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Supabase deleteCategory error:', error);
+        });
+    }
   },
 
   saveTable(table: CafeTable) {
@@ -270,18 +676,46 @@ export const actions = {
       if (i >= 0) d.tables[i] = table;
       else d.tables.push(table);
     });
+
+    if (supabase) {
+      supabase
+        .from('cafe_tables')
+        .upsert(mapTableToDb(table))
+        .then(({ error }) => {
+          if (error) console.error('Supabase saveTable error:', error);
+        });
+    }
   },
 
   deleteTable(id: string) {
     mutate((d) => {
       d.tables = d.tables.filter((t) => t.id !== id);
     });
+
+    if (supabase) {
+      supabase
+        .from('cafe_tables')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Supabase deleteTable error:', error);
+        });
+    }
   },
 
   saveSettings(patch: Partial<Settings>) {
     mutate((d) => {
       d.settings = { ...d.settings, ...patch };
     });
+
+    if (supabase) {
+      supabase
+        .from('settings')
+        .upsert(mapSettingsToDb(db.settings))
+        .then(({ error }) => {
+          if (error) console.error('Supabase saveSettings error:', error);
+        });
+    }
   },
 
   clearOrders() {
@@ -289,11 +723,42 @@ export const actions = {
       d.orders = [];
       d.calls = [];
     });
+
+    if (supabase) {
+      supabase
+        .from('orders')
+        .delete()
+        .neq('id', '___all___')
+        .then(({ error }) => {
+          if (error) console.error('Supabase clearOrders error:', error);
+        });
+      supabase
+        .from('staff_calls')
+        .delete()
+        .neq('id', '___all___')
+        .then(({ error }) => {
+          if (error) console.error('Supabase clearCalls error:', error);
+        });
+    }
   },
 
   resetAll() {
     db = seedDB();
     persist();
+
+    if (supabase) {
+      const client = supabase;
+      (async () => {
+        try {
+          await client.from('categories').upsert(db.categories.map(mapCategoryToDb));
+          await client.from('menu_items').upsert(db.items.map(mapItemToDb));
+          await client.from('cafe_tables').upsert(db.tables.map(mapTableToDb));
+          await client.from('settings').upsert(mapSettingsToDb(db.settings));
+        } catch (err) {
+          console.error('Supabase resetAll error:', err);
+        }
+      })();
+    }
   },
 
   seedDemoOrders() {
@@ -331,14 +796,26 @@ export const actions = {
         paymentMode: 'COUNTER',
       };
     };
+
+    const newOrders = [
+      mk('T03', [1, 10, 20], 'RECEIVED', 3),
+      mk('T05', [14, 18], 'PREPARING', 11),
+      mk('T02', [4, 21], 'READY', 17),
+      mk('T07', [6, 12], 'SERVED', 64),
+      mk('T01', [2, 9, 15], 'SERVED', 140),
+    ];
+
     mutate((d) => {
-      d.orders.push(
-        mk('T03', [1, 10, 20], 'RECEIVED', 3),
-        mk('T05', [14, 18], 'PREPARING', 11),
-        mk('T02', [4, 21], 'READY', 17),
-        mk('T07', [6, 12], 'SERVED', 64),
-        mk('T01', [2, 9, 15], 'SERVED', 140),
-      );
+      d.orders.push(...newOrders);
     });
+
+    if (supabase) {
+      supabase
+        .from('orders')
+        .insert(newOrders.map(mapOrderToDb))
+        .then(({ error }) => {
+          if (error) console.error('Supabase seedDemoOrders error:', error);
+        });
+    }
   },
 };
