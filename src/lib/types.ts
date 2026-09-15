@@ -111,6 +111,7 @@ export interface Settings {
   hours: string;
   adminUser: string;
   adminPassHash: string;
+  customDomain?: string;
 }
 
 export interface DB {

@@ -14,6 +14,7 @@ import {
 import { useSettings, useTables } from '../lib/store';
 import { BrandLockup, Mark } from '../components/Brand';
 import { QRImage } from '../components/QRCode';
+import { getLiveMenuUrl } from '../lib/format';
 
 const STEPS = [
   { icon: ScanLine, title: 'Scan', text: 'Guest scans the QR sticker on their table.' },
@@ -25,7 +26,8 @@ const STEPS = [
 export default function Landing() {
   const settings = useSettings();
   const tables = useTables().filter((t) => t.active);
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const featuredTable = tables[0]?.code ?? 'T01';
+  const qrLink = getLiveMenuUrl(featuredTable, settings.customDomain);
 
   return (
     <div className="min-h-dvh">
@@ -102,14 +104,16 @@ export default function Landing() {
             <div className="flex items-center justify-between">
               <Mark size={34} />
               <span className="rounded-full bg-ember-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ember-deep">
-                Table {tables[0]?.code ?? 'T01'}
+                Table {featuredTable}
               </span>
             </div>
             <div className="mt-4 grid place-items-center rounded-2xl border border-line bg-paper p-4">
-              <QRImage value={`${origin}/menu?table=${tables[0]?.code ?? 'T01'}`} size={168} />
+              <QRImage value={qrLink} size={168} />
             </div>
             <p className="mt-3 text-center font-display text-[15px] font-semibold">Scan to order</p>
+            <p className="text-center font-mono text-[10px] text-ember truncate px-2">{qrLink}</p>
             <p className="text-center text-[11px] text-mocha">{settings.tagline}</p>
+
           </motion.div>
         </div>
       </section>

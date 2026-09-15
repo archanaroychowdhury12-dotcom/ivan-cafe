@@ -175,7 +175,7 @@ export const seedTables: CafeTable[] = [
 
 export function seedDB(): DB {
   return {
-    version: 9,
+    version: 10,
     settings: {
       cafeName: 'Ivan Caffe',
       tagline: 'GOOD FOOD · GOOD MOOD',
@@ -188,6 +188,7 @@ export function seedDB(): DB {
       hours: '09:00 — 23:00 · Every day',
       adminUser: 'admin',
       adminPassHash: DEFAULT_PASS_HASH,
+      customDomain: 'https://ivan-caffe.vercel.app',
     },
     categories: seedCategories,
     items: seedItems,

@@ -47,3 +47,22 @@ export async function sha256(text: string) {
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
+
+export function getBaseUrl(customDomain?: string): string {
+  if (customDomain && customDomain.trim()) {
+    return customDomain.trim().replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return window.location.origin;
+    }
+  }
+  return 'https://ivan-caffe.vercel.app';
+}
+
+export function getLiveMenuUrl(tableCode: string, customDomain?: string): string {
+  const base = getBaseUrl(customDomain);
+  return `${base}/menu?table=${tableCode}`;
+}
+

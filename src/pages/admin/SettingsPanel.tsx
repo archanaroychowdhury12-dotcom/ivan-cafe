@@ -46,11 +46,12 @@ export default function SettingsPanel() {
               onChange={(e) => setDraft({ ...draft, tagline: e.target.value })}
             />
           </Field>
-          <Field label="Address">
+          <Field label="Live Website / QR Base Domain">
             <input
               className={inputCx}
-              value={draft.address}
-              onChange={(e) => setDraft({ ...draft, address: e.target.value })}
+              placeholder="https://ivan-caffe.vercel.app"
+              value={draft.customDomain ?? ''}
+              onChange={(e) => setDraft({ ...draft, customDomain: e.target.value })}
             />
           </Field>
           <Field label="Opening hours">
@@ -60,6 +61,15 @@ export default function SettingsPanel() {
               onChange={(e) => setDraft({ ...draft, hours: e.target.value })}
             />
           </Field>
+          <div className="sm:col-span-2">
+            <Field label="Address">
+              <input
+                className={inputCx}
+                value={draft.address}
+                onChange={(e) => setDraft({ ...draft, address: e.target.value })}
+              />
+            </Field>
+          </div>
         </div>
       </section>
 
