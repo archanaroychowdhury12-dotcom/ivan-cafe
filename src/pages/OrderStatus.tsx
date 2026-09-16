@@ -77,7 +77,14 @@ export default function OrderStatusPage() {
         </Link>
         <div className="flex-1">
           <h1 className="font-display text-[19px] font-semibold leading-tight">Live order</h1>
-          <p className="text-[11px] font-medium text-mocha">Table {order.tableCode} · {settings.cafeName}</p>
+          <p className="text-[11px] font-medium text-mocha flex items-center gap-1.5">
+            {order.diningMode === 'Takeaway' ? (
+              <span className="font-bold text-amber-700">🛍️ Takeaway / Parcel</span>
+            ) : (
+              <span>🍽️ Table {order.tableCode}</span>
+            )}
+            <span>· {settings.cafeName}</span>
+          </p>
         </div>
         <Mark size={36} />
       </header>
@@ -108,23 +115,28 @@ export default function OrderStatusPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-5 flex items-center gap-4"
+                className="mt-5"
               >
-                <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${meta.solid}`}>
-                  <meta.icon size={24} />
-                </span>
-                <div>
-                  <p className="font-display text-[26px] font-semibold leading-tight">{meta.label}</p>
-                  <p className="text-[13px] text-cream/70">{meta.blurb}</p>
+                <div className="flex items-center gap-2 text-ember">
+                  <meta.icon size={22} className="animate-[pulseSoft_2.4s_ease-in-out_infinite]" />
+                  <span className="font-display text-[26px] font-bold leading-none text-cream">
+                    {order.status === 'READY' && order.diningMode === 'Takeaway' ? 'Parcel Ready' : meta.label}
+                  </span>
                 </div>
+                <p className="mt-1.5 text-[13px] text-cream/70">
+                  {order.status === 'READY' && order.diningMode === 'Takeaway'
+                    ? 'Your food has been freshly packed in takeaway boxes!'
+                    : meta.blurb}
+                </p>
               </motion.div>
             </AnimatePresence>
 
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-cream/15">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-gold via-ember to-ember-deep"
+                className="h-full bg-ember"
+                initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
               />
             </div>
 
@@ -150,7 +162,9 @@ export default function OrderStatusPage() {
             {order.status !== 'SERVED' && order.status !== 'CANCELLED' && (
               <p className="mt-4 rounded-2xl bg-cream/10 px-4 py-2.5 text-center text-[12px] font-medium text-cream/80">
                 {order.status === 'READY'
-                  ? 'Your table number is up — food is being carried over now.'
+                  ? (order.diningMode === 'Takeaway'
+                      ? '🛍️ Your takeaway parcel is packed and ready! Please collect it at the counter.'
+                      : '🍽️ Your table number is up — food is being carried over now.')
                   : `Estimated ready in about ${etaMins} minute${etaMins === 1 ? '' : 's'}`}
               </p>
             )}
@@ -162,18 +176,22 @@ export default function OrderStatusPage() {
       <section className="px-4 pt-4">
         <div className="rounded-[24px] border border-[#EADECE] bg-[#FAF6F0] p-4 shadow-sm">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">🍽️</span>
+            <span className="text-2xl">{order.diningMode === 'Takeaway' ? '🛍️' : '🍽️'}</span>
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-[15px] font-bold text-stone-900">
-                  Dine In & Pay Later
+                  {order.diningMode === 'Takeaway' ? 'Takeaway / Parcel Order' : 'Dine In & Pay Later'}
                 </h3>
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10.5px] font-bold uppercase text-emerald-800">
+                <span className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase ${
+                  order.diningMode === 'Takeaway' ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800'
+                }`}>
                   Confirmed
                 </span>
               </div>
               <p className="mt-1 text-xs text-stone-600 leading-relaxed">
-                Your order is confirmed! Enjoy your food at Table {order.tableCode}. You can comfortably pay after eating at the counter or request the bill directly to your table.
+                {order.diningMode === 'Takeaway'
+                  ? 'Your parcel is being cooked fresh in the kitchen! Please collect your takeaway bag from the counter when ready and settle your bill.'
+                  : `Your order is confirmed! Enjoy your food at Table ${order.tableCode}. You can comfortably pay after eating at the counter or request the bill directly to your table.`}
               </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -273,10 +291,12 @@ export default function OrderStatusPage() {
               <span>Item total</span>
               <span>{money(order.subtotal)}</span>
             </div>
-            <div className="flex justify-between text-mocha">
-              <span>Taxes ({order.taxPercent}%)</span>
-              <span>{money(order.taxAmount)}</span>
-            </div>
+            {order.taxAmount > 0 && (
+              <div className="flex justify-between text-mocha">
+                <span>Taxes ({order.taxPercent}%)</span>
+                <span>{money(order.taxAmount)}</span>
+              </div>
+            )}
             {order.serviceAmount > 0 && (
               <div className="flex justify-between text-mocha">
                 <span>Service ({order.servicePercent}%)</span>
@@ -341,10 +361,11 @@ export default function OrderStatusPage() {
             onClick={() => {
               actions.callStaff(order.tableCode, reason);
               setCallOpen(false);
-              toast('Staff notified — someone is on the way', 'info');
+              toast(`Staff notified for Table ${order.tableCode} — someone is on the way`, 'info');
             }}
+            className="shadow-md shadow-amber-500/20"
           >
-            Send request
+            <BellRing size={18} className="animate-pulse" /> Call Staff (Table {order.tableCode})
           </Button>
         </div>
       </Sheet>

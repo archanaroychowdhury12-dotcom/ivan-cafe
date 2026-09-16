@@ -181,11 +181,24 @@ function OrderCard({
     >
       <div className="flex items-start justify-between gap-3 border-b border-line/70 px-4 py-3.5">
         <div className="flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-ink font-display text-[17px] font-semibold text-cream">
-            {order.tableCode.replace(/[^0-9]/g, '') || order.tableCode}
+          <span className={`grid h-12 w-12 place-items-center rounded-2xl font-display text-[17px] font-semibold ${
+            order.diningMode === 'Takeaway' ? 'bg-ember text-white' : 'bg-ink text-cream'
+          }`}>
+            {order.diningMode === 'Takeaway' ? '🛍️' : (order.tableCode.replace(/[^0-9]/g, '') || order.tableCode)}
           </span>
           <div>
-            <p className="font-display text-[16px] font-semibold leading-tight">{order.code}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-display text-[16px] font-semibold leading-tight">{order.code}</p>
+              {order.diningMode === 'Takeaway' ? (
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-orange-800">
+                  Takeaway
+                </span>
+              ) : (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">
+                  Table {order.tableCode}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] font-medium text-mocha">
               {order.customerName} · {clockTime(order.createdAt)} · {elapsed(order.createdAt)}
             </p>
@@ -221,21 +234,11 @@ function OrderCard({
         </p>
       </button>
 
-      <div className="flex items-center gap-2 border-t border-line/70 bg-cream/40 px-4 py-3">
-        <span className="font-display text-[17px] font-semibold">{money(order.total, currency)}</span>
-        <span className="flex-1" />
-        {order.status !== 'SERVED' && order.status !== 'CANCELLED' && (
-          <button
-            onClick={() => actions.setOrderStatus(order.id, 'CANCELLED', 'Manager')}
-            className="grid h-9 w-9 place-items-center rounded-xl text-mocha transition hover:bg-berry/10 hover:text-berry"
-            title="Cancel order"
-          >
-            <XCircle size={16} />
-          </button>
-        )}
+      <div className="flex items-center justify-between border-t border-line/70 bg-cream/40 px-4 py-2.5">
+        <span className="font-display text-[15px] font-semibold">{money(order.total, currency)}</span>
         {next && (
-          <Button size="sm" onClick={() => actions.setOrderStatus(order.id, next, 'Counter')}>
-            Mark {STATUS_META[next].label}
+          <Button size="sm" onClick={() => actions.setOrderStatus(order.id, next, 'Manager')}>
+            Move to {STATUS_META[next].label}
           </Button>
         )}
       </div>
@@ -246,10 +249,19 @@ function OrderCard({
 function OrderDetail({ order }: { order: Order }) {
   return (
     <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <StatusPill status={order.status} />
+        {order.diningMode === 'Takeaway' ? (
+          <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-black uppercase text-orange-800">
+            🛍️ Takeaway / Parcel
+          </span>
+        ) : (
+          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold uppercase text-emerald-800">
+            🍽️ Dine-in Table {order.tableCode}
+          </span>
+        )}
         <span className="text-[13px] font-semibold text-mocha">
-          Table {order.tableCode} · {order.customerName}
+          {order.customerName}
           {order.customerPhone ? ` · ${order.customerPhone}` : ''}
         </span>
       </div>
@@ -310,14 +322,18 @@ function OrderDetail({ order }: { order: Order }) {
           <span>Subtotal</span>
           <span>{money(order.subtotal)}</span>
         </div>
-        <div className="flex justify-between text-mocha">
-          <span>Tax ({order.taxPercent}%)</span>
-          <span>{money(order.taxAmount)}</span>
-        </div>
-        <div className="flex justify-between text-mocha">
-          <span>Service ({order.servicePercent}%)</span>
-          <span>{money(order.serviceAmount)}</span>
-        </div>
+        {order.taxAmount > 0 && (
+          <div className="flex justify-between text-mocha">
+            <span>Tax ({order.taxPercent}%)</span>
+            <span>{money(order.taxAmount)}</span>
+          </div>
+        )}
+        {order.serviceAmount > 0 && (
+          <div className="flex justify-between text-mocha">
+            <span>Service ({order.servicePercent}%)</span>
+            <span>{money(order.serviceAmount)}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between border-t border-dashed border-line pt-2">
           <span className="font-display text-[16px] font-semibold">Total</span>
           <span className="font-display text-[18px] font-semibold">{money(order.total)}</span>

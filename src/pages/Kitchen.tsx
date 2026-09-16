@@ -15,7 +15,7 @@ import {
 import { actions, useCalls, useOrders, useSettings } from '../lib/store';
 import { clockTime, elapsed } from '../lib/format';
 import type { Order, OrderStatus } from '../lib/types';
-import { chime } from '../lib/sound';
+import { chime, formatTableSpeech, playStaffCallAlert } from '../lib/sound';
 import { Mark } from '../components/Brand';
 
 const COLUMNS: { key: 'NEW' | 'PREPARING' | 'READY'; title: string; sub: string; accent: string }[] = [
@@ -28,16 +28,22 @@ export default function KitchenPage() {
   const orders = useOrders();
   const calls = useCalls();
   const settings = useSettings();
-  const [sound, setSound] = useState(false);
+  const [sound, setSound] = useState(() => {
+    const saved = localStorage.getItem('kitchen_sound');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [flash, setFlash] = useState<string | null>(null);
+  const [callAlert, setCallAlert] = useState<{ tableCode: string; reason: string } | null>(null);
   const [, tick] = useState(0);
   const seen = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
+  const seenCalls = useRef<Set<string>>(new Set(calls.map((c) => c.id)));
 
   useEffect(() => {
     const i = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(i);
   }, []);
 
+  // Track incoming new orders
   useEffect(() => {
     const fresh = orders.filter((o) => !seen.current.has(o.id));
     if (fresh.length) {
@@ -49,6 +55,30 @@ export default function KitchenPage() {
       return () => clearTimeout(t);
     }
   }, [orders, sound]);
+
+  // Track incoming staff calls: ring and speak "Table X, call staff"
+  useEffect(() => {
+    const freshCalls = calls.filter((c) => !c.resolved && !seenCalls.current.has(c.id));
+    if (freshCalls.length) {
+      freshCalls.forEach((c) => seenCalls.current.add(c.id));
+      const newest = freshCalls[0];
+      setCallAlert({ tableCode: newest.tableCode, reason: newest.reason });
+      if (sound) {
+        playStaffCallAlert(newest.tableCode);
+      }
+      const t = setTimeout(() => setCallAlert(null), 6000);
+      return () => clearTimeout(t);
+    }
+  }, [calls, sound]);
+
+  const toggleSound = () => {
+    setSound((s) => {
+      const next = !s;
+      localStorage.setItem('kitchen_sound', String(next));
+      if (next) chime();
+      return next;
+    });
+  };
 
   const buckets = useMemo(() => {
     const active = orders.filter((o) => !['SERVED', 'CANCELLED'].includes(o.status));
@@ -82,11 +112,8 @@ export default function KitchenPage() {
             {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
           <button
-            onClick={() => {
-              setSound((s) => !s);
-              if (!sound) chime();
-            }}
-            className={`grid h-10 w-10 place-items-center rounded-xl transition ${
+            onClick={toggleSound}
+            className={`grid h-10 w-10 place-items-center rounded-xl transition cursor-pointer ${
               sound ? 'bg-olive text-white' : 'bg-cream/10 text-cream/70'
             }`}
             title={sound ? 'Sound on' : 'Sound off'}
@@ -105,6 +132,24 @@ export default function KitchenPage() {
             className="fixed left-1/2 top-20 z-40 -translate-x-1/2 rounded-2xl bg-ember px-6 py-3 text-[15px] font-bold shadow-lift"
           >
             🔔 New order {flash} just came in
+          </motion.div>
+        )}
+        {callAlert && (
+          <motion.div
+            initial={{ y: -30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -30, opacity: 0 }}
+            className="fixed left-1/2 top-20 z-50 -translate-x-1/2 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 px-6 py-3.5 text-stone-950 shadow-2xl border-2 border-amber-300 font-black animate-pulse"
+          >
+            <BellRing size={24} className="animate-bounce shrink-0 text-stone-950" />
+            <div className="text-left">
+              <span className="text-[17px] uppercase tracking-wide block">
+                🔔 {formatTableSpeech(callAlert.tableCode).toUpperCase()} CALLING STAFF!
+              </span>
+              <span className="text-[12px] font-bold text-stone-900/90 block">
+                Reason: {callAlert.reason}
+              </span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -197,7 +242,18 @@ function Ticket({ order, highlight }: { order: Order; highlight: boolean }) {
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-display text-[26px] font-semibold leading-none">{order.tableCode}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-display text-[26px] font-semibold leading-none">{order.tableCode}</p>
+            {order.diningMode === 'Takeaway' ? (
+              <span className="rounded-lg bg-ember px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-white shadow-sm">
+                🛍️ Takeaway / Parcel
+              </span>
+            ) : (
+              <span className="rounded-lg bg-olive/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-olive">
+                🍽️ Dine-in
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-[11px] font-bold tracking-[0.1em] text-cream/45">{order.code}</p>
         </div>
         <div className="text-right">

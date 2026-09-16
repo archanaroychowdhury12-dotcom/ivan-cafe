@@ -454,8 +454,11 @@ export function useOrder(id?: string) {
 
 export function priceOrder(lines: CartLine[], s: Settings) {
   const subtotal = lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
-  const taxAmount = (subtotal * s.taxPercent) / 100;
-  const serviceAmount = s.serviceEnabled ? (subtotal * s.servicePercent) / 100 : 0;
+  const isTaxOn = Boolean(s.taxEnabled) && Number(s.taxPercent) > 0;
+  const isServiceOn = Boolean(s.serviceEnabled) && Number(s.servicePercent) > 0;
+
+  const taxAmount = isTaxOn ? (subtotal * s.taxPercent) / 100 : 0;
+  const serviceAmount = isServiceOn ? (subtotal * s.servicePercent) / 100 : 0;
   return {
     subtotal,
     taxAmount: Math.round(taxAmount * 100) / 100,
@@ -473,6 +476,7 @@ export const actions = {
 
   placeOrder(input: {
     tableCode: string;
+    diningMode?: 'Dine-in' | 'Takeaway';
     lines: CartLine[];
     customerName: string;
     customerPhone?: string;
@@ -482,17 +486,21 @@ export const actions = {
     const s = db.settings;
     const totals = priceOrder(input.lines, s);
     const now = Date.now();
+    const isTaxOn = Boolean(s.taxEnabled) && Number(s.taxPercent) > 0;
+    const isServiceOn = Boolean(s.serviceEnabled) && Number(s.servicePercent) > 0;
+
     const order: Order = {
       id: uid('o_'),
       code: orderCode(),
       tableCode: input.tableCode,
+      diningMode: input.diningMode || 'Dine-in',
       customerName: input.customerName.trim() || 'Guest',
       customerPhone: input.customerPhone,
       lines: input.lines,
       note: input.note,
       ...totals,
-      taxPercent: s.taxPercent,
-      servicePercent: s.serviceEnabled ? s.servicePercent : 0,
+      taxPercent: isTaxOn ? s.taxPercent : 0,
+      servicePercent: isServiceOn ? s.servicePercent : 0,
       status: 'CONFIRMED',
       createdAt: now,
       updatedAt: now,

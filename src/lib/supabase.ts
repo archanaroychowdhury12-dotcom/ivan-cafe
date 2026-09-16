@@ -172,6 +172,7 @@ export function mapSettingsFromDb(row: any, fallback: Settings): Settings {
     tagline: row.tagline || fallback.tagline,
     currency: row.currency || fallback.currency,
     taxPercent: Number(row.tax_percent ?? fallback.taxPercent),
+    taxEnabled: Boolean(row.tax_enabled ?? (Number(row.tax_percent ?? 0) > 0)),
     servicePercent: Number(row.service_percent ?? fallback.servicePercent),
     serviceEnabled: Boolean(row.service_enabled),
     acceptingOrders: Boolean(row.accepting_orders ?? true),
@@ -179,6 +180,7 @@ export function mapSettingsFromDb(row: any, fallback: Settings): Settings {
     hours: row.hours || fallback.hours,
     adminUser: row.admin_user || fallback.adminUser,
     adminPassHash: row.admin_pass_hash || fallback.adminPassHash,
+    customDomain: row.custom_domain || fallback.customDomain,
   };
 }
 
@@ -189,12 +191,14 @@ export function mapSettingsToDb(s: Settings) {
     tagline: s.tagline,
     currency: s.currency,
     tax_percent: s.taxPercent,
+    tax_enabled: Boolean(s.taxEnabled),
     service_percent: s.servicePercent,
-    service_enabled: s.serviceEnabled,
+    service_enabled: Boolean(s.serviceEnabled),
     accepting_orders: s.acceptingOrders,
     address: s.address,
     hours: s.hours,
     admin_user: s.adminUser,
     admin_pass_hash: s.adminPassHash,
+    custom_domain: s.customDomain || null,
   };
 }

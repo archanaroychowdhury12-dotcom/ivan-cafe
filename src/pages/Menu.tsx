@@ -155,7 +155,26 @@ export default function MenuPage() {
   const [ordersSheetOpen, setOrdersSheetOpen] = useState(false);
   const [reason, setReason] = useState<CallReason>('Assistance');
   const [callNote, setCallNote] = useState('');
-  const [diningMode, setDiningMode] = useState<'Dine-in' | 'Takeaway'>('Dine-in');
+  const [diningMode, setDiningMode] = useState<'Dine-in' | 'Takeaway'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ivan-dining-mode');
+      if (saved === 'Takeaway' || saved === 'Dine-in') return saved;
+    }
+    return 'Dine-in';
+  });
+
+  const switchDiningMode = (mode: 'Dine-in' | 'Takeaway') => {
+    setDiningMode(mode);
+    try {
+      localStorage.setItem('ivan-dining-mode', mode);
+    } catch {}
+    blip();
+    if (mode === 'Takeaway') {
+      toast('🛍️ Takeaway / Parcel mode selected — Pack & carry!', 'info');
+    } else {
+      toast(`🍽️ Dine-in mode selected — Serve at Table ${table.code}!`, 'info');
+    }
+  };
 
   const handleCallStaff = (selectedReason: CallReason = 'Assistance', note?: string) => {
     actions.callStaff(table.code, selectedReason, note);
@@ -283,20 +302,24 @@ export default function MenuPage() {
               <span className="text-[12px] font-black tracking-wide uppercase leading-none">Call Staff</span>
             </button>
 
-            {/* Table Selection Badge */}
+            {/* Table Selection / Dining Mode Badge */}
             <button
               type="button"
               onClick={() => setTableModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 px-2.5 py-2 backdrop-blur-md transition active:scale-95 text-left shadow-sm"
+              className={`flex items-center gap-1.5 rounded-2xl px-3 py-1.5 backdrop-blur-md transition active:scale-95 text-left shadow-sm border ${
+                diningMode === 'Takeaway'
+                  ? 'bg-amber-600/30 hover:bg-amber-600/40 border-amber-400/40 text-amber-200'
+                  : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+              }`}
             >
-              <div>
-                <p className="text-[11.5px] font-bold text-white leading-none">
-                  {table.code}
+              <div className="text-right">
+                <p className="text-[12px] font-black leading-none flex items-center gap-1">
+                  {diningMode === 'Takeaway' ? '🛍️ Takeaway' : `🍽️ ${table.code}`}
+                  <ChevronDown size={11} className="opacity-70" />
                 </p>
-                <div className="flex items-center gap-0.5 text-[9px] text-[#D8B99A] font-medium leading-tight mt-0.5">
-                  <span>{diningMode}</span>
-                  <ChevronDown size={8} />
-                </div>
+                <p className="text-[9px] text-[#D8B99A] font-bold uppercase tracking-wider mt-0.5">
+                  {diningMode === 'Takeaway' ? 'Parcel' : 'Dine-in'}
+                </p>
               </div>
             </button>
           </div>
@@ -349,12 +372,115 @@ export default function MenuPage() {
       {/* 2. MAIN CURVED SHEET CONTAINER                       */}
       {/* ---------------------------------------------------- */}
       <div className="relative -mt-6 rounded-t-[34px] bg-[#FAF6F0] px-4 pt-4 pb-6 border-t border-[#EADECE]/80 shadow-2xl">
+        {/* ---------------------------------------------------- */}
+        {/* PROMINENT DINING MODE SWITCHER: DINE-IN vs TAKEAWAY  */}
+        {/* ---------------------------------------------------- */}
+        <div className="mb-3.5 overflow-hidden rounded-[24px] border border-[#E7DCCE] bg-white p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            {/* Dine-In Tab */}
+            <button
+              type="button"
+              onClick={() => switchDiningMode('Dine-in')}
+              className={`relative flex items-center justify-center gap-2 rounded-2xl py-3 px-3 transition-all cursor-pointer ${
+                diningMode === 'Dine-in'
+                  ? 'bg-gradient-to-br from-[#18392B] to-[#0F261D] text-white shadow-md shadow-emerald-950/20 ring-1 ring-emerald-700/50'
+                  : 'bg-[#F9F6F0] text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200/60'
+              }`}
+            >
+              <div className={`grid h-8 w-8 place-items-center rounded-xl shrink-0 ${
+                diningMode === 'Dine-in' ? 'bg-white/15 text-amber-300' : 'bg-white text-stone-500 shadow-2xs'
+              }`}>
+                <UtensilsCrossed size={16} strokeWidth={2.5} />
+              </div>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13.5px] font-black leading-tight">Dine-in</span>
+                  <span className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-extrabold ${
+                    diningMode === 'Dine-in' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-stone-200 text-stone-600'
+                  }`}>
+                    {table.code}
+                  </span>
+                </div>
+                <p className={`text-[10px] font-medium leading-none mt-0.5 truncate ${
+                  diningMode === 'Dine-in' ? 'text-emerald-100/80' : 'text-stone-500'
+                }`}>
+                  Eat at table
+                </p>
+              </div>
+            </button>
+
+            {/* Takeaway Tab */}
+            <button
+              type="button"
+              onClick={() => switchDiningMode('Takeaway')}
+              className={`relative flex items-center justify-center gap-2 rounded-2xl py-3 px-3 transition-all cursor-pointer ${
+                diningMode === 'Takeaway'
+                  ? 'bg-gradient-to-br from-[#C2571F] to-[#9C3F10] text-white shadow-md shadow-orange-950/20 ring-1 ring-orange-600/50'
+                  : 'bg-[#F9F6F0] text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200/60'
+              }`}
+            >
+              <div className={`grid h-8 w-8 place-items-center rounded-xl shrink-0 ${
+                diningMode === 'Takeaway' ? 'bg-white/20 text-white' : 'bg-white text-stone-500 shadow-2xs'
+              }`}>
+                <ShoppingBag size={16} strokeWidth={2.5} />
+              </div>
+              <div className="text-left min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13.5px] font-black leading-tight">Takeaway</span>
+                  <span className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-extrabold ${
+                    diningMode === 'Takeaway' ? 'bg-white/25 text-white' : 'bg-orange-100 text-orange-800'
+                  }`}>
+                    Parcel 🛍️
+                  </span>
+                </div>
+                <p className={`text-[10px] font-medium leading-none mt-0.5 truncate ${
+                  diningMode === 'Takeaway' ? 'text-amber-100/90' : 'text-stone-500'
+                }`}>
+                  Pack & carry
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Context Helper Line */}
+          <div className="mt-2 flex items-center justify-between border-t border-[#F0E6D8] pt-2 px-1 text-[11px]">
+            {diningMode === 'Dine-in' ? (
+              <>
+                <span className="flex items-center gap-1.5 text-emerald-800 font-semibold">
+                  <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                  Serving fresh at <strong className="text-emerald-950">Table {table.code}</strong> ({table.label || 'Main Hall'})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTableModalOpen(true)}
+                  className="rounded-lg bg-stone-100 hover:bg-stone-200 px-2 py-0.5 text-[10.5px] font-bold text-stone-700 transition"
+                >
+                  Change Table
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-1.5 text-orange-800 font-semibold">
+                  <span className="h-2 w-2 rounded-full bg-orange-600 animate-pulse" />
+                  <strong className="text-orange-950">Takeaway / Parcel</strong> · Packed fresh to take home or office
+                </span>
+                <span className="rounded-lg bg-orange-100 px-2 py-0.5 text-[10.5px] font-extrabold text-orange-900">
+                  Counter Collect
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* Quick Top Call Staff Bar - Extra Large & Prominent */}
         <div className="mb-4">
           <button
             type="button"
-            onClick={() => setCallOpen(true)}
-            className="w-full flex items-center justify-between rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border-2 border-amber-500/40 p-3 text-amber-950 shadow-sm transition active:scale-[0.98]"
+            onClick={() => {
+              handleCallStaff('Assistance');
+              setCallOpen(true);
+            }}
+            className="w-full flex items-center justify-between rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border-2 border-amber-500/40 p-3 text-amber-950 shadow-sm transition active:scale-[0.98] cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500 text-stone-950 shadow-md shadow-amber-500/30 shrink-0">
@@ -585,28 +711,38 @@ export default function MenuPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
               Select Dining Mode
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                onClick={() => setDiningMode('Dine-in')}
-                className={`rounded-xl py-3 px-4 text-sm font-bold border transition ${
+                onClick={() => {
+                  switchDiningMode('Dine-in');
+                  setTableModalOpen(false);
+                }}
+                className={`rounded-2xl py-3 px-4 text-sm font-bold border transition flex flex-col items-center gap-1 ${
                   diningMode === 'Dine-in'
-                    ? 'bg-[#18392B] text-white border-[#18392B]'
-                    : 'bg-white text-stone-700 border-stone-300'
+                    ? 'bg-[#18392B] text-white border-[#18392B] shadow-md'
+                    : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'
                 }`}
               >
-                🍽️ Dine-in
+                <span className="text-xl">🍽️</span>
+                <span>Dine-in</span>
+                <span className="text-[10px] opacity-80">Eat at Table</span>
               </button>
               <button
                 type="button"
-                onClick={() => setDiningMode('Takeaway')}
-                className={`rounded-xl py-3 px-4 text-sm font-bold border transition ${
+                onClick={() => {
+                  switchDiningMode('Takeaway');
+                  setTableModalOpen(false);
+                }}
+                className={`rounded-2xl py-3 px-4 text-sm font-bold border transition flex flex-col items-center gap-1 ${
                   diningMode === 'Takeaway'
-                    ? 'bg-[#18392B] text-white border-[#18392B]'
-                    : 'bg-white text-stone-700 border-stone-300'
+                    ? 'bg-[#C2571F] text-white border-[#C2571F] shadow-md'
+                    : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'
                 }`}
               >
-                🛍️ Takeaway
+                <span className="text-xl">🛍️</span>
+                <span>Takeaway</span>
+                <span className="text-[10px] opacity-80">Parcel / Pack to go</span>
               </button>
             </div>
           </div>
@@ -714,6 +850,7 @@ export default function MenuPage() {
               type="button"
               onClick={() => {
                 setMoreOpen(false);
+                handleCallStaff('Assistance');
                 setCallOpen(true);
               }}
               className="flex w-full items-center justify-between rounded-xl bg-white border border-stone-200 p-3.5 font-bold text-stone-800 transition hover:bg-stone-50"
@@ -758,12 +895,17 @@ export default function MenuPage() {
                 </span>
               )}
             </button>
+          </div>
 
-            <div className="rounded-xl bg-white border border-stone-200 p-3.5 text-stone-800">
+          <div className="rounded-2xl border border-stone-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-amber-600" />
+              <p className="text-sm font-bold">Fast WiFi in Cafe</p>
+            </div>
+            <p className="mt-1 text-xs text-stone-500">Scan QR on your table or connect to:</p>
+            <div className="mt-3 rounded-xl bg-stone-100 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-stone-500 uppercase tracking-wide">
-                  Guest Wi-Fi
-                </span>
+                <span className="text-xs text-stone-500">Network</span>
                 <span className="text-xs font-mono font-bold text-emerald-800">Connected</span>
               </div>
               <p className="mt-1 font-bold text-sm">Ivan-Guest-5G</p>
@@ -774,36 +916,51 @@ export default function MenuPage() {
       </Sheet>
 
       {/* Staff Call Sheet */}
-      <Sheet open={callOpen} onClose={() => setCallOpen(false)} title="Call our staff">
+      <Sheet open={callOpen} onClose={() => setCallOpen(false)} title="Call Our Staff">
         <div className="space-y-4 px-5 py-5">
-          <p className="text-sm text-stone-600">
-            A team member will come to <strong className="text-stone-900">Table {table.code}</strong>.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {REASONS.map((r) => (
-              <Chip key={r} active={reason === r} onClick={() => setReason(r)}>
-                {r}
-              </Chip>
-            ))}
+          <div className="flex items-center gap-3 rounded-2xl bg-amber-500/15 p-3.5 border border-amber-500/30">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500 text-stone-950 shrink-0 shadow-md shadow-amber-500/30">
+              <BellRing size={20} className="animate-bounce" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-stone-900">
+                Calling staff for <span className="text-amber-900 underline font-black">{formatTableSpeech(table.code)}</span>
+              </p>
+              <p className="text-xs text-stone-600">
+                Ringtone and voice alert has been sent to our staff.
+              </p>
+            </div>
           </div>
+
+          <div>
+            <p className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Need something specific?</p>
+            <div className="flex flex-wrap gap-2">
+              {REASONS.map((r) => (
+                <Chip key={r} active={reason === r} onClick={() => setReason(r)}>
+                  {r}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
           <textarea
             rows={2}
             value={callNote}
             onChange={(e) => setCallNote(e.target.value.slice(0, 120))}
-            placeholder="Anything specific? (optional)"
+            placeholder="Anything specific? (optional, e.g. extra napkins or cutlery)"
             className="w-full resize-none rounded-2xl border border-stone-300 bg-white px-4 py-3 text-[14px] outline-none focus:border-emerald-800 focus:ring-2 focus:ring-emerald-800/10"
           />
           <Button
             full
             size="lg"
             onClick={() => {
-              actions.callStaff(table.code, reason, callNote.trim() || undefined);
+              handleCallStaff(reason, callNote.trim() || undefined);
               setCallOpen(false);
               setCallNote('');
-              toast('Staff notified — someone is on the way', 'info');
             }}
+            className="shadow-lg shadow-amber-500/20 cursor-pointer"
           >
-            <BellRing size={16} /> Send request
+            <BellRing size={18} className="animate-pulse" /> Ring Staff Again ({formatTableSpeech(table.code)})
           </Button>
         </div>
       </Sheet>

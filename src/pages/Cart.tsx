@@ -7,10 +7,12 @@ import {
   CreditCard,
   Minus,
   NotebookPen,
+  PackageCheck,
   Plus,
   ShoppingBag,
   Smartphone,
   Trash2,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { cart, useCart } from '../lib/cart';
 import { actions, priceOrder, useSettings, useTables } from '../lib/store';
@@ -23,11 +25,11 @@ const MODES: { id: Order['paymentMode']; label: string; icon: typeof Banknote; h
     id: 'COUNTER',
     label: 'Pay After Meal (At Counter)',
     icon: Banknote,
-    hint: 'Eat first, pay when you finish your meal',
+    hint: 'Settle in cash, UPI or card at the counter anytime',
   },
   {
     id: 'UPI',
-    label: 'UPI / PhonePe QR',
+    label: 'Pay via UPI QR',
     icon: Smartphone,
     hint: 'Scan QR at table anytime (UPI: Q438109503@ybl)',
   },
@@ -47,6 +49,26 @@ export default function CartPage() {
   const tables = useTables();
   const navigate = useNavigate();
   const toast = useToast();
+
+  const [diningMode, setDiningMode] = useState<'Dine-in' | 'Takeaway'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ivan-dining-mode');
+      if (saved === 'Takeaway' || saved === 'Dine-in') return saved;
+    }
+    return 'Dine-in';
+  });
+
+  const selectDiningMode = (mode: 'Dine-in' | 'Takeaway') => {
+    setDiningMode(mode);
+    try {
+      localStorage.setItem('ivan-dining-mode', mode);
+    } catch {}
+    if (mode === 'Takeaway') {
+      toast('🛍️ Order set to Takeaway (Parcel)', 'info');
+    } else {
+      toast(`🍽️ Order set to Dine-in (Table ${table})`, 'info');
+    }
+  };
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -72,6 +94,7 @@ export default function CartPage() {
     await new Promise((r) => setTimeout(r, 750));
     const order = actions.placeOrder({
       tableCode: table,
+      diningMode,
       lines,
       customerName: name,
       customerPhone: phone || undefined,
@@ -95,8 +118,12 @@ export default function CartPage() {
         </Link>
         <div className="flex-1">
           <h1 className="font-display text-[19px] font-semibold leading-tight">Your tray</h1>
-          <p className="text-[11px] font-medium text-mocha">
-            Table {table} {tableRow ? `· ${tableRow.label}` : ''}
+          <p className="text-[11px] font-medium text-mocha flex items-center gap-1.5">
+            {diningMode === 'Takeaway' ? (
+              <span className="font-bold text-amber-700">🛍️ Takeaway / Parcel Order</span>
+            ) : (
+              <span>🍽️ Table {table} {tableRow ? `· ${tableRow.label}` : ''}</span>
+            )}
           </p>
         </div>
         {lines.length > 0 && (
@@ -127,6 +154,76 @@ export default function CartPage() {
         </div>
       ) : (
         <div className="space-y-5 px-4 pt-4">
+          {/* Order Type Selection: Dine-in vs Takeaway */}
+          <section className="overflow-hidden rounded-[24px] border border-line/80 bg-paper p-4 shadow-card">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-display text-[16px] font-bold text-ink flex items-center gap-2">
+                  <UtensilsCrossed size={16} className="text-ember" /> How do you want this order?
+                </h3>
+                <p className="text-[11.5px] text-mocha mt-0.5">
+                  Choose whether to eat at the cafe or take it home
+                </p>
+              </div>
+              <span className={`rounded-full text-[10.5px] font-extrabold px-2.5 py-0.5 uppercase tracking-wide ${
+                diningMode === 'Takeaway' ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {diningMode === 'Takeaway' ? '🛍️ Parcel' : '🍽️ Dine-in'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => selectDiningMode('Dine-in')}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition cursor-pointer ${
+                  diningMode === 'Dine-in'
+                    ? 'border-[#18392B] bg-[#18392B]/10 ring-2 ring-[#18392B] shadow-xs'
+                    : 'border-line/70 hover:border-mocha/40 bg-cream/30'
+                }`}
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-emerald-800 mb-1.5 shadow-2xs">
+                  <UtensilsCrossed size={20} strokeWidth={2.2} />
+                </div>
+                <span className="text-[13.5px] font-bold text-ink leading-tight">Dine-in</span>
+                <span className="text-[11px] text-mocha mt-0.5 font-medium">Table {table}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => selectDiningMode('Takeaway')}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition cursor-pointer ${
+                  diningMode === 'Takeaway'
+                    ? 'border-[#C2571F] bg-orange-50 ring-2 ring-[#C2571F] shadow-xs'
+                    : 'border-line/70 hover:border-mocha/40 bg-cream/30'
+                }`}
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100 text-orange-800 mb-1.5 shadow-2xs">
+                  <ShoppingBag size={20} strokeWidth={2.2} />
+                </div>
+                <span className="text-[13.5px] font-bold text-ink leading-tight">Takeaway</span>
+                <span className="text-[11px] text-mocha mt-0.5 font-medium">Parcel / Pack to go</span>
+              </button>
+            </div>
+
+            {diningMode === 'Takeaway' ? (
+              <div className="mt-3 rounded-xl bg-orange-50 border border-orange-200/80 p-3 flex items-start gap-2 text-[12px] text-orange-950">
+                <PackageCheck size={17} className="text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Takeaway / Parcel Packed Fresh</p>
+                  <p className="text-[11.5px] text-orange-900 mt-0.5 leading-relaxed">
+                    The kitchen will pack your food in takeaway containers. Pick up your parcel at the counter when called!
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl bg-emerald-50/70 border border-emerald-200/60 p-2.5 flex items-center gap-2 text-[12px] text-emerald-950">
+                <span className="h-2 w-2 rounded-full bg-emerald-600 shrink-0" />
+                <span>Food will be served hot directly to <strong>Table {table}</strong>.</span>
+              </div>
+            )}
+          </section>
+
           <section className="space-y-3">
             {lines.map((l, idx) => (
               <motion.div
@@ -284,8 +381,10 @@ export default function CartPage() {
             <h3 className="mb-3 font-display text-[16px] font-semibold">Bill summary</h3>
             <dl className="space-y-2 text-[14px]">
               <Row label="Item total" value={money(totals.subtotal)} />
-              <Row label={`Taxes (${settings.taxPercent}%)`} value={money(totals.taxAmount)} />
-              {settings.serviceEnabled && (
+              {settings.taxEnabled && settings.taxPercent > 0 && totals.taxAmount > 0 && (
+                <Row label={`Taxes (${settings.taxPercent}%)`} value={money(totals.taxAmount)} />
+              )}
+              {settings.serviceEnabled && settings.servicePercent > 0 && totals.serviceAmount > 0 && (
                 <Row
                   label={`Service charge (${settings.servicePercent}%)`}
                   value={money(totals.serviceAmount)}
@@ -302,10 +401,16 @@ export default function CartPage() {
       {lines.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-line/70 bg-paper/95 px-4 py-3 backdrop-blur-lg safe-bottom">
           <Button full size="lg" loading={placing} onClick={place}>
-            {placing ? 'Sending to kitchen…' : `Confirm Order (Pay Later) · ${money(totals.total)}`}
+            {placing
+              ? 'Sending to kitchen…'
+              : diningMode === 'Takeaway'
+                ? `Confirm Takeaway Order · ${money(totals.total)} 🛍️`
+                : `Confirm Order (Table ${table}) · ${money(totals.total)} 🍽️`}
           </Button>
           <p className="mt-1.5 text-center text-[11px] text-mocha">
-            Instant Confirmation • Eat first, pay after your meal at Table {table}
+            {diningMode === 'Takeaway'
+              ? 'Instant Confirmation • Cooked fresh & packed • Collect at Counter'
+              : `Instant Confirmation • Eat first, pay after your meal at Table ${table}`}
           </p>
         </div>
       )}

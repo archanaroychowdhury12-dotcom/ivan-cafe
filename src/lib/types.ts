@@ -71,6 +71,7 @@ export interface Order {
   id: string;
   code: string;
   tableCode: string;
+  diningMode?: 'Dine-in' | 'Takeaway';
   customerName: string;
   customerPhone?: string;
   lines: CartLine[];
@@ -104,6 +105,7 @@ export interface Settings {
   tagline: string;
   currency: string;
   taxPercent: number;
+  taxEnabled: boolean;
   servicePercent: number;
   serviceEnabled: boolean;
   acceptingOrders: boolean;

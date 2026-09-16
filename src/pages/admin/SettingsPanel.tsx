@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertTriangle, Cloud, DatabaseZap, KeyRound, Percent, RefreshCw, Save, Store } from 'lucide-react';
 import { actions, useSettings, useSyncStatus } from '../../lib/store';
 import { sha256 } from '../../lib/format';
@@ -11,6 +11,10 @@ export default function SettingsPanel() {
   const [draft, setDraft] = useState(settings);
   const [pass, setPass] = useState({ current: '', next: '', confirm: '' });
   const [passError, setPassError] = useState('');
+
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
 
@@ -85,34 +89,57 @@ export default function SettingsPanel() {
               onChange={(e) => setDraft({ ...draft, currency: e.target.value.slice(0, 3) })}
             />
           </Field>
-          <Field label="Tax %">
+          <Field label="Tax % (when enabled)">
             <input
               type="number"
               min={0}
               max={50}
-              className={inputCx}
+              className={`${inputCx} ${!draft.taxEnabled ? 'opacity-50' : ''}`}
               value={draft.taxPercent}
               onChange={(e) => setDraft({ ...draft, taxPercent: Number(e.target.value) })}
             />
           </Field>
-          <Field label="Service charge %">
+          <Field label="Service charge % (when enabled)">
             <input
               type="number"
               min={0}
               max={50}
-              className={inputCx}
+              className={`${inputCx} ${!draft.serviceEnabled ? 'opacity-50' : ''}`}
               value={draft.servicePercent}
               onChange={(e) => setDraft({ ...draft, servicePercent: Number(e.target.value) })}
             />
           </Field>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="flex items-center justify-between rounded-2xl border border-line bg-cream/40 px-4 py-3">
+            <div>
+              <p className="text-[14px] font-semibold">Apply taxes (GST / VAT)</p>
+              <p className="text-[12px] text-mocha">Turn off to completely remove taxes from customer bills.</p>
+            </div>
+            <Toggle
+              on={Boolean(draft.taxEnabled)}
+              onChange={(v) => {
+                const next = { ...draft, taxEnabled: v };
+                setDraft(next);
+                actions.saveSettings(next);
+                toast(v ? 'Taxes enabled' : 'Taxes disabled', 'info');
+              }}
+            />
+          </div>
           <div className="flex items-center justify-between rounded-2xl border border-line bg-cream/40 px-4 py-3">
             <div>
               <p className="text-[14px] font-semibold">Apply service charge</p>
-              <p className="text-[12px] text-mocha">Adds to every new order at checkout.</p>
+              <p className="text-[12px] text-mocha">Turn off to remove service charge from customer bills.</p>
             </div>
-            <Toggle on={draft.serviceEnabled} onChange={(v) => setDraft({ ...draft, serviceEnabled: v })} />
+            <Toggle
+              on={Boolean(draft.serviceEnabled)}
+              onChange={(v) => {
+                const next = { ...draft, serviceEnabled: v };
+                setDraft(next);
+                actions.saveSettings(next);
+                toast(v ? 'Service charge enabled' : 'Service charge disabled', 'info');
+              }}
+            />
           </div>
           <div className="flex items-center justify-between rounded-2xl border border-line bg-cream/40 px-4 py-3">
             <div>
@@ -120,8 +147,13 @@ export default function SettingsPanel() {
               <p className="text-[12px] text-mocha">Turn off to close the kitchen for new orders.</p>
             </div>
             <Toggle
-              on={draft.acceptingOrders}
-              onChange={(v) => setDraft({ ...draft, acceptingOrders: v })}
+              on={Boolean(draft.acceptingOrders)}
+              onChange={(v) => {
+                const next = { ...draft, acceptingOrders: v };
+                setDraft(next);
+                actions.saveSettings(next);
+                toast(v ? 'Kitchen open for orders' : 'Kitchen closed for orders', 'info');
+              }}
             />
           </div>
         </div>
