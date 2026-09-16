@@ -402,15 +402,15 @@ export default function CartPage() {
         <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-line/70 bg-paper/95 px-4 py-3 backdrop-blur-lg safe-bottom">
           <Button full size="lg" loading={placing} onClick={place}>
             {placing
-              ? 'Sending to kitchen…'
+              ? 'Sending straight to kitchen…'
               : diningMode === 'Takeaway'
-                ? `Confirm Takeaway Order · ${money(totals.total)} 🛍️`
-                : `Confirm Order (Table ${table}) · ${money(totals.total)} 🍽️`}
+                ? `Send to Kitchen (Takeaway) · ${money(totals.total)} 🛍️`
+                : `Send to Kitchen (Table ${table}) · ${money(totals.total)} 🍽️`}
           </Button>
           <p className="mt-1.5 text-center text-[11px] text-mocha">
             {diningMode === 'Takeaway'
-              ? 'Instant Confirmation • Cooked fresh & packed • Collect at Counter'
-              : `Instant Confirmation • Eat first, pay after your meal at Table ${table}`}
+              ? '⚡ Direct to Kitchen • Chef starts cooking immediately • Collect at Counter'
+              : `⚡ Direct to Kitchen • Chef starts cooking immediately for Table ${table}`}
           </p>
         </div>
       )}

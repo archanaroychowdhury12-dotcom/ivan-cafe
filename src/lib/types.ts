@@ -1,6 +1,7 @@
-export type OrderStatus = 'RECEIVED' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED';
+export type OrderStatus = 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED' | 'RECEIVED' | 'CONFIRMED';
 
-export const FLOW: OrderStatus[] = ['RECEIVED', 'CONFIRMED', 'PREPARING', 'READY', 'SERVED'];
+export const FLOW: OrderStatus[] = ['PREPARING', 'READY', 'SERVED'];
+
 
 export interface AddonOption {
   id: string;

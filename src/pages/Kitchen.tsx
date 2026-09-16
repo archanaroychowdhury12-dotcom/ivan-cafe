@@ -18,10 +18,10 @@ import type { Order, OrderStatus } from '../lib/types';
 import { chime, formatTableSpeech, playStaffCallAlert } from '../lib/sound';
 import { Mark } from '../components/Brand';
 
-const COLUMNS: { key: 'NEW' | 'PREPARING' | 'READY'; title: string; sub: string; accent: string }[] = [
-  { key: 'NEW', title: 'Received', sub: 'Accept & start', accent: 'from-gold/30' },
-  { key: 'PREPARING', title: 'Preparing', sub: 'On the pass', accent: 'from-ember/30' },
-  { key: 'READY', title: 'Ready', sub: 'Hand to floor', accent: 'from-olive/30' },
+const COLUMNS: { key: 'PREPARING' | 'READY' | 'SERVED'; title: string; sub: string; accent: string }[] = [
+  { key: 'PREPARING', title: 'Cooking Now', sub: 'Direct from table / takeaway', accent: 'from-ember/30' },
+  { key: 'READY', title: 'Ready to Serve / Collect', sub: 'Food plated / packed', accent: 'from-olive/30' },
+  { key: 'SERVED', title: 'Served', sub: 'Completed orders', accent: 'from-cream/15' },
 ];
 
 export default function KitchenPage() {
@@ -81,11 +81,13 @@ export default function KitchenPage() {
   };
 
   const buckets = useMemo(() => {
-    const active = orders.filter((o) => !['SERVED', 'CANCELLED'].includes(o.status));
+    const active = orders.filter((o) => o.status !== 'CANCELLED');
     return {
-      NEW: active.filter((o) => o.status === 'RECEIVED' || o.status === 'CONFIRMED').reverse(),
-      PREPARING: active.filter((o) => o.status === 'PREPARING').reverse(),
+      PREPARING: active
+        .filter((o) => o.status === 'PREPARING' || o.status === 'RECEIVED' || o.status === 'CONFIRMED')
+        .reverse(),
       READY: active.filter((o) => o.status === 'READY').reverse(),
+      SERVED: active.filter((o) => o.status === 'SERVED').slice(-15).reverse(),
     };
   }, [orders]);
 
@@ -216,13 +218,9 @@ function Ticket({ order, highlight }: { order: Order; highlight: boolean }) {
   const heat = mins > 15 ? 'border-berry' : mins > 8 ? 'border-gold/70' : 'border-cream/10';
 
   const next: { label: string; to: OrderStatus; icon: typeof Flame } =
-    order.status === 'RECEIVED'
-      ? { label: 'Accept order', to: 'CONFIRMED', icon: CheckCheck }
-      : order.status === 'CONFIRMED'
-        ? { label: 'Start cooking', to: 'PREPARING', icon: Flame }
-        : order.status === 'PREPARING'
-          ? { label: 'Mark ready', to: 'READY', icon: HandPlatter }
-          : { label: 'Mark served', to: 'SERVED', icon: CheckCheck };
+    order.status === 'READY'
+      ? { label: 'Mark served', to: 'SERVED', icon: CheckCheck }
+      : { label: 'Mark ready', to: 'READY', icon: HandPlatter };
 
   const Icon = next.icon;
 
@@ -299,22 +297,28 @@ function Ticket({ order, highlight }: { order: Order; highlight: boolean }) {
         </p>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          onClick={() => actions.setOrderStatus(order.id, next.to, 'Kitchen')}
-          className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-cream text-[14px] font-bold text-espresso transition active:scale-[0.97]"
-        >
-          <Icon size={17} /> {next.label}
-        </button>
-        {order.status === 'READY' && (
+      {order.status !== 'SERVED' ? (
+        <div className="mt-3 flex items-center gap-2">
           <button
-            onClick={() => actions.setOrderStatus(order.id, 'PREPARING', 'Kitchen')}
-            className="h-12 rounded-2xl border border-cream/20 px-4 text-[13px] font-semibold text-cream/70 transition hover:bg-cream/10"
+            onClick={() => actions.setOrderStatus(order.id, next.to, 'Kitchen')}
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-cream text-[14px] font-bold text-espresso transition active:scale-[0.97]"
           >
-            Undo
+            <Icon size={17} /> {next.label}
           </button>
-        )}
-      </div>
+          {order.status === 'READY' && (
+            <button
+              onClick={() => actions.setOrderStatus(order.id, 'PREPARING', 'Kitchen')}
+              className="h-12 rounded-2xl border border-cream/20 px-4 text-[13px] font-semibold text-cream/70 transition hover:bg-cream/10"
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-xl bg-cream/10 py-2.5 text-center text-[12px] font-bold text-cream/70">
+          Served ✓
+        </div>
+      )}
     </motion.article>
   );
 }

@@ -501,12 +501,11 @@ export const actions = {
       ...totals,
       taxPercent: isTaxOn ? s.taxPercent : 0,
       servicePercent: isServiceOn ? s.servicePercent : 0,
-      status: 'CONFIRMED',
+      status: 'PREPARING',
       createdAt: now,
       updatedAt: now,
       timeline: [
-        { status: 'RECEIVED', at: now, by: 'Guest' },
-        { status: 'CONFIRMED', at: now, by: 'Instant Confirmation' },
+        { status: 'PREPARING', at: now, by: 'Direct to Kitchen' },
       ],
       paymentMode: input.paymentMode,
     };

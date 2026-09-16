@@ -18,8 +18,6 @@ import { Button, Chip, EmptyState, Sheet } from '../../components/ui';
 
 const FILTERS: (OrderStatus | 'ALL' | 'ACTIVE')[] = [
   'ACTIVE',
-  'RECEIVED',
-  'CONFIRMED',
   'PREPARING',
   'READY',
   'SERVED',
@@ -41,7 +39,9 @@ export default function OrdersPanel() {
           ? true
           : filter === 'ACTIVE'
             ? !['SERVED', 'CANCELLED'].includes(o.status)
-            : o.status === filter;
+            : filter === 'PREPARING'
+              ? o.status === 'PREPARING' || o.status === 'RECEIVED' || o.status === 'CONFIRMED'
+              : o.status === filter;
       const text = (o.code + o.tableCode + o.customerName + o.lines.map((l) => l.name).join(' ')).toLowerCase();
       return byStatus && (!q || text.includes(q.toLowerCase()));
     });

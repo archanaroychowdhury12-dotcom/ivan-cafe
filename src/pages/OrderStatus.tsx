@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { actions, useOrder, useSettings } from '../lib/store';
 import { clockTime, elapsed, money } from '../lib/format';
-import { FLOW, type CallReason } from '../lib/types';
+import { FLOW, type CallReason, type OrderStatus } from '../lib/types';
 import { STATUS_META } from '../components/status';
 import { Button, Chip, EmptyState, Sheet, useToast } from '../components/ui';
 import { Mark } from '../components/Brand';
@@ -57,9 +57,11 @@ export default function OrderStatusPage() {
     );
   }
 
-  const meta = STATUS_META[order.status];
-  const activeIdx = FLOW.indexOf(order.status);
-  const progress = order.status === 'CANCELLED' ? 0 : ((activeIdx + 1) / FLOW.length) * 100;
+  const currentStatus: OrderStatus =
+    order.status === 'RECEIVED' || order.status === 'CONFIRMED' ? 'PREPARING' : order.status;
+  const meta = STATUS_META[currentStatus];
+  const activeIdx = Math.max(0, FLOW.indexOf(currentStatus));
+  const progress = order.status === 'CANCELLED' ? 0 : Math.max(20, ((activeIdx + 1) / FLOW.length) * 100);
   const etaMins = Math.max(
     2,
     Math.round(order.lines.reduce((m, l) => Math.max(m, 8 + l.qty * 2), 8) - (Date.now() - order.createdAt) / 60000),
@@ -161,11 +163,11 @@ export default function OrderStatusPage() {
 
             {order.status !== 'SERVED' && order.status !== 'CANCELLED' && (
               <p className="mt-4 rounded-2xl bg-cream/10 px-4 py-2.5 text-center text-[12px] font-medium text-cream/80">
-                {order.status === 'READY'
+                {currentStatus === 'READY'
                   ? (order.diningMode === 'Takeaway'
                       ? '🛍️ Your takeaway parcel is packed and ready! Please collect it at the counter.'
-                      : '🍽️ Your table number is up — food is being carried over now.')
-                  : `Estimated ready in about ${etaMins} minute${etaMins === 1 ? '' : 's'}`}
+                      : '🍽️ Your food is plated and ready — being served to your table now.')
+                  : `🔥 Direct to Kitchen • Chef is cooking your order now • Ready in ~${etaMins} mins`}
               </p>
             )}
           </div>
