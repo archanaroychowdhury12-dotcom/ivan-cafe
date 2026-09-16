@@ -98,14 +98,19 @@ export function mapTableToDb(table: CafeTable) {
 }
 
 export function mapOrderFromDb(row: any): Order {
+  const rawNote = row.note || '';
+  const isTakeaway = rawNote.includes('[Takeaway]') || row.dining_mode === 'Takeaway';
+  const cleanNote = rawNote.replace('[Takeaway]', '').trim() || undefined;
+
   return {
     id: row.id,
     code: row.code,
     tableCode: row.table_code,
-    customerName: row.customer_name,
+    diningMode: isTakeaway ? 'Takeaway' : 'Dine-in',
+    customerName: row.customer_name || 'Guest',
     customerPhone: row.customer_phone || undefined,
     lines: Array.isArray(row.lines) ? row.lines : [],
-    note: row.note || undefined,
+    note: cleanNote,
     subtotal: Number(row.subtotal ?? 0),
     taxAmount: Number(row.tax_amount ?? 0),
     serviceAmount: Number(row.service_amount ?? 0),
@@ -121,6 +126,11 @@ export function mapOrderFromDb(row: any): Order {
 }
 
 export function mapOrderToDb(o: Order) {
+  let noteValue = o.note || null;
+  if (o.diningMode === 'Takeaway') {
+    noteValue = noteValue ? `[Takeaway] ${noteValue}` : '[Takeaway]';
+  }
+
   return {
     id: o.id,
     code: o.code,
@@ -128,7 +138,7 @@ export function mapOrderToDb(o: Order) {
     customer_name: o.customerName,
     customer_phone: o.customerPhone || null,
     lines: o.lines,
-    note: o.note || null,
+    note: noteValue,
     subtotal: o.subtotal,
     tax_amount: o.taxAmount,
     service_amount: o.serviceAmount,

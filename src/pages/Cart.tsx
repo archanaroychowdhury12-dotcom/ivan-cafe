@@ -64,8 +64,8 @@ export default function CartPage() {
     }
     setErrors({});
     setPlacing(true);
-    await new Promise((r) => setTimeout(r, 750));
-    const order = actions.placeOrder({
+    await new Promise((r) => setTimeout(r, 400));
+    const order = await actions.placeOrder({
       tableCode: table,
       diningMode,
       lines,

@@ -31,6 +31,7 @@ import {
 } from './supabase';
 import { playStaffCallAlert } from './sound';
 
+const CURRENT_VERSION = 10;
 const KEY = 'ivan-food-court-db-v10';
 const CHANNEL = 'ivan-food-court-sync';
 
@@ -90,15 +91,37 @@ function load(): DB {
     const raw = localStorage.getItem(KEY);
     if (!raw) {
       const fresh = seedDB();
+      fresh.version = CURRENT_VERSION;
       localStorage.setItem(KEY, JSON.stringify(fresh));
       return fresh;
     }
     const parsed = JSON.parse(raw) as DB;
-    if (!parsed || parsed.version !== 10 || !Array.isArray(parsed.items)) {
+    if (!parsed || typeof parsed !== 'object') {
       const fresh = seedDB();
+      fresh.version = CURRENT_VERSION;
       localStorage.setItem(KEY, JSON.stringify(fresh));
       return fresh;
     }
+
+    // Always preserve any existing orders and calls
+    const existingOrders = Array.isArray(parsed.orders) ? parsed.orders : [];
+    const existingCalls = Array.isArray(parsed.calls) ? parsed.calls : [];
+
+    if (parsed.version !== CURRENT_VERSION || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+      const fresh = seedDB();
+      fresh.version = CURRENT_VERSION;
+      fresh.orders = existingOrders;
+      fresh.calls = existingCalls;
+      if (parsed.settings) {
+        fresh.settings = { ...fresh.settings, ...parsed.settings };
+      }
+      localStorage.setItem(KEY, JSON.stringify(fresh));
+      return fresh;
+    }
+
+    parsed.orders = existingOrders;
+    parsed.calls = existingCalls;
+    parsed.version = CURRENT_VERSION;
     return parsed;
   } catch {
     return seedDB();
@@ -204,21 +227,42 @@ async function fetchFromSupabase() {
       return;
     }
 
-    // Merge into memory
     const remoteCategories = categoriesData ? categoriesData.map(mapCategoryFromDb) : db.categories;
     const remoteItems = itemsData ? itemsData.map(mapItemFromDb) : db.items;
     const remoteTables = tablesData ? tablesData.map(mapTableFromDb) : db.tables;
-    const remoteOrders = ordersData ? ordersData.map(mapOrderFromDb) : db.orders;
-    const remoteCalls = callsData ? callsData.map(mapCallFromDb) : db.calls;
     const remoteSettings = settingsData ? mapSettingsFromDb(settingsData, db.settings) : db.settings;
 
+    // Merge orders: keep all remote orders, plus any local orders not yet in remote
+    const orderMap = new Map<string, Order>();
+    if (ordersData) {
+      ordersData.map(mapOrderFromDb).forEach((o) => orderMap.set(o.id, o));
+    }
+    db.orders.forEach((o) => {
+      if (!orderMap.has(o.id)) {
+        orderMap.set(o.id, o);
+      }
+    });
+    const mergedOrders = Array.from(orderMap.values()).sort((a, b) => b.createdAt - a.createdAt);
+
+    // Merge staff calls
+    const callMap = new Map<string, StaffCall>();
+    if (callsData) {
+      callsData.map(mapCallFromDb).forEach((c) => callMap.set(c.id, c));
+    }
+    db.calls.forEach((c) => {
+      if (!callMap.has(c.id)) {
+        callMap.set(c.id, c);
+      }
+    });
+    const mergedCalls = Array.from(callMap.values()).sort((a, b) => b.createdAt - a.createdAt);
+
     db = {
-      version: 8,
+      version: CURRENT_VERSION,
       categories: remoteCategories,
       items: remoteItems,
       tables: remoteTables,
-      orders: remoteOrders,
-      calls: remoteCalls,
+      orders: mergedOrders,
+      calls: mergedCalls,
       settings: remoteSettings,
     };
 
@@ -474,7 +518,18 @@ export const actions = {
     return fetchFromSupabase();
   },
 
-  placeOrder(input: {
+  injectOrder(order: Order) {
+    mutate((d) => {
+      const idx = d.orders.findIndex((o) => o.id === order.id || o.code === order.code);
+      if (idx >= 0) {
+        d.orders[idx] = { ...d.orders[idx], ...order };
+      } else {
+        d.orders.unshift(order);
+      }
+    });
+  },
+
+  async placeOrder(input: {
     tableCode: string;
     diningMode?: 'Dine-in' | 'Takeaway';
     lines: CartLine[];
@@ -482,7 +537,7 @@ export const actions = {
     customerPhone?: string;
     note?: string;
     paymentMode: Order['paymentMode'];
-  }): Order {
+  }): Promise<Order> {
     const s = db.settings;
     const totals = priceOrder(input.lines, s);
     const now = Date.now();
@@ -511,16 +566,16 @@ export const actions = {
     };
 
     mutate((d) => {
-      d.orders.push(order);
+      d.orders.unshift(order);
     });
 
     if (supabase) {
-      supabase
-        .from('orders')
-        .insert(mapOrderToDb(order))
-        .then(({ error }) => {
-          if (error) console.error('Supabase placeOrder error:', error);
-        });
+      try {
+        const { error } = await supabase.from('orders').insert(mapOrderToDb(order));
+        if (error) console.error('Supabase placeOrder error:', error);
+      } catch (err) {
+        console.error('Failed to insert order to Supabase:', err);
+      }
     }
 
     return order;

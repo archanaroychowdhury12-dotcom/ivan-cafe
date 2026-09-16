@@ -15,13 +15,14 @@ import {
   Utensils,
   XCircle,
 } from 'lucide-react';
-import { actions, useOrder, useSettings } from '../lib/store';
+import { actions, useOrder, useSettings, useSyncStatus } from '../lib/store';
 import { clockTime, elapsed, money } from '../lib/format';
 import { FLOW, type CallReason, type OrderStatus } from '../lib/types';
 import { STATUS_META } from '../components/status';
 import { Button, Chip, EmptyState, Sheet, useToast } from '../components/ui';
 import { Mark } from '../components/Brand';
 import { QRImage } from '../components/QRCode';
+import { mapOrderFromDb, supabase } from '../lib/supabase';
 
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
@@ -37,8 +38,10 @@ export default function OrderStatusPage() {
   const { code } = useParams();
   const order = useOrder(code);
   const settings = useSettings();
+  const syncStatus = useSyncStatus();
   const toast = useToast();
   const [, tick] = useState(0);
+  const [remoteLoading, setRemoteLoading] = useState(!order);
   const [callOpen, setCallOpen] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -52,6 +55,53 @@ export default function OrderStatusPage() {
     const i = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(i);
   }, []);
+
+  // Ensure order is loaded from Supabase even upon fresh browser refresh
+  useEffect(() => {
+    if (order) {
+      setRemoteLoading(false);
+      return;
+    }
+
+    let active = true;
+    const fetchRemoteOrder = async () => {
+      try {
+        if (supabase && code) {
+          const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .or(`code.eq.${code},id.eq.${code}`)
+            .maybeSingle();
+
+          if (!active) return;
+          if (data && !error) {
+            const mapped = mapOrderFromDb(data);
+            actions.injectOrder(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch order from Supabase:', err);
+      } finally {
+        if (active) setRemoteLoading(false);
+      }
+    };
+
+    fetchRemoteOrder();
+
+    return () => {
+      active = false;
+    };
+  }, [code, order]);
+
+  if (!order && remoteLoading) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-4 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-600 border-t-transparent mb-4" />
+        <h2 className="font-display text-lg font-bold text-stone-900">Loading Order #{code}...</h2>
+        <p className="mt-1 text-xs text-stone-500">Syncing live order from Ivan Caffe kitchen</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
