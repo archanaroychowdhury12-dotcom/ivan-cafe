@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertTriangle,
   ArrowLeft,
   BellRing,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   SearchX,
   Smartphone,
   Utensils,
+  XCircle,
 } from 'lucide-react';
 import { actions, useOrder, useSettings } from '../lib/store';
 import { clockTime, elapsed, money } from '../lib/format';
@@ -23,6 +25,14 @@ import { QRImage } from '../components/QRCode';
 
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
+const CANCEL_REASONS = [
+  'Ordered by mistake',
+  'Want to change items / Reorder',
+  'Wait time is too long',
+  'Need to leave early',
+  'Other reason',
+];
+
 export default function OrderStatusPage() {
   const { code } = useParams();
   const order = useOrder(code);
@@ -31,6 +41,9 @@ export default function OrderStatusPage() {
   const [, tick] = useState(0);
   const [callOpen, setCallOpen] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState(CANCEL_REASONS[0]);
+  const [cancelNote, setCancelNote] = useState('');
   const [qrTab, setQrTab] = useState<'code' | 'photo'>('code');
   const [billRequested, setBillRequested] = useState(false);
   const [reason, setReason] = useState<CallReason>('Assistance');
@@ -57,15 +70,25 @@ export default function OrderStatusPage() {
     );
   }
 
+  const isCancelled = order.status === 'CANCELLED';
   const currentStatus: OrderStatus =
     order.status === 'RECEIVED' || order.status === 'CONFIRMED' ? 'PREPARING' : order.status;
   const meta = STATUS_META[currentStatus];
   const activeIdx = Math.max(0, FLOW.indexOf(currentStatus));
-  const progress = order.status === 'CANCELLED' ? 0 : Math.max(20, ((activeIdx + 1) / FLOW.length) * 100);
+  const progress = isCancelled ? 0 : Math.max(20, ((activeIdx + 1) / FLOW.length) * 100);
+  const cancelEntry = isCancelled ? order.timeline.slice().reverse().find((t) => t.status === 'CANCELLED') : undefined;
   const etaMins = Math.max(
     2,
     Math.round(order.lines.reduce((m, l) => Math.max(m, 8 + l.qty * 2), 8) - (Date.now() - order.createdAt) / 60000),
   );
+
+  const handleCancelOrder = () => {
+    if (!order) return;
+    const detail = cancelNote.trim() ? `${cancelReason} - ${cancelNote.trim()}` : cancelReason;
+    actions.setOrderStatus(order.id, 'CANCELLED', `Customer (${detail})`);
+    setCancelOpen(false);
+    toast(`Order #${order.code} has been cancelled`, 'info');
+  };
 
   return (
     <div className="mx-auto min-h-dvh max-w-md pb-16">
@@ -119,49 +142,62 @@ export default function OrderStatusPage() {
                 exit={{ opacity: 0, y: -10 }}
                 className="mt-5"
               >
-                <div className="flex items-center gap-2 text-ember">
-                  <meta.icon size={22} className="animate-[pulseSoft_2.4s_ease-in-out_infinite]" />
+                <div className={`flex items-center gap-2 ${isCancelled ? 'text-rose-400' : 'text-ember'}`}>
+                  <meta.icon size={22} className={isCancelled ? '' : 'animate-[pulseSoft_2.4s_ease-in-out_infinite]'} />
                   <span className="font-display text-[26px] font-bold leading-none text-cream">
                     {order.status === 'READY' && order.diningMode === 'Takeaway' ? 'Parcel Ready' : meta.label}
                   </span>
                 </div>
                 <p className="mt-1.5 text-[13px] text-cream/70">
-                  {order.status === 'READY' && order.diningMode === 'Takeaway'
-                    ? 'Your food has been freshly packed in takeaway boxes!'
-                    : meta.blurb}
+                  {isCancelled
+                    ? (cancelEntry?.by ? `Cancelled by ${cancelEntry.by}` : 'This order was cancelled.')
+                    : order.status === 'READY' && order.diningMode === 'Takeaway'
+                      ? 'Your food has been freshly packed in takeaway boxes!'
+                      : meta.blurb}
                 </p>
               </motion.div>
             </AnimatePresence>
 
-            <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-cream/15">
-              <motion.div
-                className="h-full bg-ember"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-            </div>
-
-            <div className="mt-3 flex justify-between">
-              {FLOW.map((s, i) => (
-                <div key={s} className="flex flex-1 flex-col items-center gap-1.5">
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${
-                      i <= activeIdx ? 'bg-ember' : 'bg-cream/25'
-                    } ${i === activeIdx ? 'animate-[pulseSoft_2.4s_ease-in-out_infinite] ring-4 ring-ember/25' : ''}`}
+            {isCancelled ? (
+              <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-berry/25 py-3 px-4 border border-berry/40 text-rose-200">
+                <XCircle size={18} className="text-rose-400 shrink-0" />
+                <span className="text-[12px] font-bold">
+                  Order Cancelled · Kitchen has stopped cooking
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-cream/15">
+                  <motion.div
+                    className="h-full bg-ember"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
                   />
-                  <span
-                    className={`text-[9px] font-bold uppercase tracking-[0.08em] ${
-                      i <= activeIdx ? 'text-cream' : 'text-cream/40'
-                    }`}
-                  >
-                    {STATUS_META[s].label}
-                  </span>
                 </div>
-              ))}
-            </div>
 
-            {order.status !== 'SERVED' && order.status !== 'CANCELLED' && (
+                <div className="mt-3 flex justify-between">
+                  {FLOW.map((s, i) => (
+                    <div key={s} className="flex flex-1 flex-col items-center gap-1.5">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${
+                          i <= activeIdx ? 'bg-ember' : 'bg-cream/25'
+                        } ${i === activeIdx ? 'animate-[pulseSoft_2.4s_ease-in-out_infinite] ring-4 ring-ember/25' : ''}`}
+                      />
+                      <span
+                        className={`text-[9px] font-bold uppercase tracking-[0.08em] ${
+                          i <= activeIdx ? 'text-cream' : 'text-cream/40'
+                        }`}
+                      >
+                        {STATUS_META[s].label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {!isCancelled && order.status !== 'SERVED' && (
               <p className="mt-4 rounded-2xl bg-cream/10 px-4 py-2.5 text-center text-[12px] font-medium text-cream/80">
                 {currentStatus === 'READY'
                   ? (order.diningMode === 'Takeaway'
@@ -174,54 +210,86 @@ export default function OrderStatusPage() {
         </div>
       </section>
 
-      {/* --------------------------- pay after meal card --------------------------- */}
-      <section className="px-4 pt-4">
-        <div className="rounded-[24px] border border-[#EADECE] bg-[#FAF6F0] p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">{order.diningMode === 'Takeaway' ? '🛍️' : '🍽️'}</span>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-[15px] font-bold text-stone-900">
-                  {order.diningMode === 'Takeaway' ? 'Takeaway / Parcel Order' : 'Dine In & Pay Later'}
-                </h3>
-                <span className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase ${
-                  order.diningMode === 'Takeaway' ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800'
-                }`}>
-                  Confirmed
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-stone-600 leading-relaxed">
-                {order.diningMode === 'Takeaway'
-                  ? 'Your parcel is being cooked fresh in the kitchen! Please collect your takeaway bag from the counter when ready and settle your bill.'
-                  : `Your order is confirmed! Enjoy your food at Table ${order.tableCode}. You can comfortably pay after eating at the counter or request the bill directly to your table.`}
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    actions.callStaff(order.tableCode, 'Request bill');
-                    setBillRequested(true);
-                    toast('Bill requested! A server will bring the bill to Table ' + order.tableCode, 'success');
-                  }}
-                  className="rounded-xl bg-[#18392B] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#122A20] active:scale-95 flex items-center gap-1.5"
-                >
-                  <Receipt size={14} />
-                  <span>{billRequested ? 'Bill Requested ✓' : 'Request Bill (After Meal)'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPayModalOpen(true)}
-                  className="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-bold text-stone-800 transition hover:bg-stone-50"
-                >
-                  💳 Settle Bill / UPI
-                </button>
+      {/* --------------------------- pay / cancelled card --------------------------- */}
+      {isCancelled ? (
+        <section className="px-4 pt-4">
+          <div className="rounded-[24px] border border-rose-200 bg-rose-50/80 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🚫</span>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-[15px] font-bold text-rose-950">
+                    Order Cancelled
+                  </h3>
+                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10.5px] font-bold uppercase text-rose-800">
+                    Cancelled
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-rose-900/80 leading-relaxed">
+                  This order was cancelled {cancelEntry?.by ? `(${cancelEntry.by})` : ''}. No payment is required and the kitchen will not prepare these items.
+                </p>
+                <div className="mt-3">
+                  <Link
+                    to={`/menu?table=${order.tableCode}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#18392B] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#122A20] active:scale-95"
+                  >
+                    <Utensils size={14} />
+                    <span>Browse Menu & Order Again</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="px-4 pt-4">
+          <div className="rounded-[24px] border border-[#EADECE] bg-[#FAF6F0] p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">{order.diningMode === 'Takeaway' ? '🛍️' : '🍽️'}</span>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-[15px] font-bold text-stone-900">
+                    {order.diningMode === 'Takeaway' ? 'Takeaway / Parcel Order' : 'Dine In & Pay Later'}
+                  </h3>
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase ${
+                    order.diningMode === 'Takeaway' ? 'bg-orange-100 text-orange-800' : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    Confirmed
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-stone-600 leading-relaxed">
+                  {order.diningMode === 'Takeaway'
+                    ? 'Your parcel is being cooked fresh in the kitchen! Please collect your takeaway bag from the counter when ready and settle your bill.'
+                    : `Your order is confirmed! Enjoy your food at Table ${order.tableCode}. You can comfortably pay after eating at the counter or request the bill directly to your table.`}
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      actions.callStaff(order.tableCode, 'Request bill');
+                      setBillRequested(true);
+                      toast('Bill requested! A server will bring the bill to Table ' + order.tableCode, 'success');
+                    }}
+                    className="rounded-xl bg-[#18392B] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#122A20] active:scale-95 flex items-center gap-1.5"
+                  >
+                    <Receipt size={14} />
+                    <span>{billRequested ? 'Bill Requested ✓' : 'Request Bill (After Meal)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPayModalOpen(true)}
+                    className="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-bold text-stone-800 transition hover:bg-stone-50"
+                  >
+                    💳 Settle Bill / UPI
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* -------------------------------- timeline ------------------------------- */}
       <section className="px-4 pt-4">
@@ -327,10 +395,22 @@ export default function OrderStatusPage() {
         </Button>
         <Link to={`/menu?table=${order.tableCode}`}>
           <Button variant="dark" size="lg" full>
-            Order more
+            {isCancelled ? 'Order Again' : 'Order more'}
           </Button>
         </Link>
       </div>
+
+      {!isCancelled && order.status !== 'SERVED' && (
+        <div className="px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => setCancelOpen(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/80 bg-rose-50/80 py-3 text-[13px] font-bold text-rose-700 transition hover:bg-rose-100/90 active:scale-[0.98]"
+          >
+            <XCircle size={16} /> Cancel this order
+          </button>
+        </div>
+      )}
 
       {order.status === 'SERVED' && (
         <motion.div
@@ -489,6 +569,81 @@ export default function OrderStatusPage() {
           >
             I Have Completed Payment
           </Button>
+        </div>
+      </Sheet>
+
+      {/* Cancel Order Confirmation Sheet */}
+      <Sheet open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancel Order">
+        <div className="space-y-4 px-5 py-5">
+          <div className="flex items-start gap-3 rounded-2xl bg-rose-50 p-4 border border-rose-200">
+            <AlertTriangle className="text-rose-600 shrink-0 mt-0.5" size={20} />
+            <div className="text-xs text-rose-900">
+              <p className="font-bold text-sm text-rose-950 mb-0.5">
+                Cancel Order #{order.code}?
+              </p>
+              {order.status === 'READY' ? (
+                <p className="leading-relaxed">
+                  ⚠️ Your food is already prepared and ready! Please only cancel if you cannot receive it.
+                </p>
+              ) : (
+                <p className="leading-relaxed">
+                  The kitchen is cooking your items right now. If you cancel, the chef will be notified immediately to stop preparing.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-2">
+              Reason for cancellation
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {CANCEL_REASONS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setCancelReason(r)}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    cancelReason === r
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : 'border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-1">
+              Note (optional)
+            </label>
+            <input
+              type="text"
+              placeholder="Any additional details..."
+              value={cancelNote}
+              onChange={(e) => setCancelNote(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 placeholder-stone-400 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5 pt-2">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setCancelOpen(false)}
+            >
+              Keep Order
+            </Button>
+            <button
+              type="button"
+              onClick={handleCancelOrder}
+              className="flex items-center justify-center gap-1.5 rounded-2xl bg-rose-600 px-4 py-3 text-xs font-bold text-white shadow-md shadow-rose-500/20 transition hover:bg-rose-700 active:scale-95"
+            >
+              <XCircle size={16} /> Confirm Cancel
+            </button>
+          </div>
         </div>
       </Sheet>
     </div>

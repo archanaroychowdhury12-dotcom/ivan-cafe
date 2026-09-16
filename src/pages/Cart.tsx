@@ -4,13 +4,11 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Banknote,
-  CreditCard,
   Minus,
   NotebookPen,
   PackageCheck,
   Plus,
   ShoppingBag,
-  Smartphone,
   Trash2,
   UtensilsCrossed,
 } from 'lucide-react';
@@ -19,27 +17,6 @@ import { actions, priceOrder, useSettings, useTables } from '../lib/store';
 import { money } from '../lib/format';
 import { Button, EmptyState, Field, inputCx, useToast } from '../components/ui';
 import type { Order } from '../lib/types';
-
-const MODES: { id: Order['paymentMode']; label: string; icon: typeof Banknote; hint: string }[] = [
-  {
-    id: 'COUNTER',
-    label: 'Pay After Meal (At Counter)',
-    icon: Banknote,
-    hint: 'Settle in cash, UPI or card at the counter anytime',
-  },
-  {
-    id: 'UPI',
-    label: 'Pay via UPI QR',
-    icon: Smartphone,
-    hint: 'Scan QR at table anytime (UPI: Q438109503@ybl)',
-  },
-  {
-    id: 'CARD',
-    label: 'Card on Table',
-    icon: CreditCard,
-    hint: 'Server brings wireless card machine to your table',
-  },
-];
 
 export default function CartPage() {
   const [params] = useSearchParams();
@@ -83,10 +60,6 @@ export default function CartPage() {
   const place = async () => {
     if (phone && !/^[0-9+\-\s]{7,15}$/.test(phone)) {
       setErrors({ phone: 'Enter a valid phone number or leave it blank.' });
-      return;
-    }
-    if (!settings.acceptingOrders) {
-      toast('The kitchen is not accepting orders right now.', 'error');
       return;
     }
     setErrors({});
@@ -329,51 +302,22 @@ export default function CartPage() {
 
           <section className="rounded-[24px] border border-line/80 bg-paper p-4 shadow-card">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-[16px] font-semibold">Payment Option</h3>
+              <h3 className="font-display text-[16px] font-semibold">Payment Method</h3>
               <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-0.5">
                 Pay After Meal
               </span>
             </div>
 
-            <div className="mb-3 rounded-2xl bg-[#F4F9F4] border border-emerald-200/80 p-3 flex items-start gap-2.5">
-              <span className="text-xl">🍽️</span>
+            <div className="rounded-2xl bg-[#F4F9F4] border border-emerald-200/80 p-3.5 flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800 font-bold">
+                <Banknote size={20} />
+              </div>
               <div>
-                <p className="text-xs font-bold text-emerald-950">Eat First, Pay Later Guarantee</p>
-                <p className="text-[11.5px] text-emerald-800 mt-0.5 leading-relaxed">
-                  Your order will be instantly confirmed and sent straight to the kitchen. Enjoy your dining experience and settle your bill after eating!
+                <p className="text-sm font-bold text-emerald-950">Pay at Counter (After Meal)</p>
+                <p className="text-[12px] text-emerald-800 mt-0.5 leading-relaxed">
+                  Your order is sent straight to the kitchen and automatically confirmed. Settle in cash, UPI or card at the counter anytime during or after your meal.
                 </p>
               </div>
-            </div>
-
-            <div className="grid gap-2">
-              {MODES.map((m) => {
-                const Icon = m.icon;
-                const active = mode === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => setMode(m.id)}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                      active ? 'border-[#18392B] bg-[#18392B]/5' : 'border-line hover:border-mocha/40'
-                    }`}
-                  >
-                    <span
-                      className={`grid h-9 w-9 place-items-center rounded-xl ${
-                        active ? 'bg-[#18392B] text-white' : 'bg-cream-deep text-ink-soft'
-                      }`}
-                    >
-                      <Icon size={16} />
-                    </span>
-                    <span className="flex-1">
-                      <span className="block text-[14px] font-semibold">{m.label}</span>
-                      <span className="block text-[11px] text-mocha">{m.hint}</span>
-                    </span>
-                    <span
-                      className={`h-4 w-4 rounded-full border-2 ${active ? 'border-[#18392B] bg-[#18392B]' : 'border-line'}`}
-                    />
-                  </button>
-                );
-              })}
             </div>
           </section>
 

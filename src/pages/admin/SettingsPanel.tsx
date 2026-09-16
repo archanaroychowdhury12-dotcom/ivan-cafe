@@ -110,7 +110,7 @@ export default function SettingsPanel() {
             />
           </Field>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <div className="flex items-center justify-between rounded-2xl border border-line bg-cream/40 px-4 py-3">
             <div>
               <p className="text-[14px] font-semibold">Apply taxes (GST / VAT)</p>
@@ -138,21 +138,6 @@ export default function SettingsPanel() {
                 setDraft(next);
                 actions.saveSettings(next);
                 toast(v ? 'Service charge enabled' : 'Service charge disabled', 'info');
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-2xl border border-line bg-cream/40 px-4 py-3">
-            <div>
-              <p className="text-[14px] font-semibold">Accepting orders</p>
-              <p className="text-[12px] text-mocha">Turn off to close the kitchen for new orders.</p>
-            </div>
-            <Toggle
-              on={Boolean(draft.acceptingOrders)}
-              onChange={(v) => {
-                const next = { ...draft, acceptingOrders: v };
-                setDraft(next);
-                actions.saveSettings(next);
-                toast(v ? 'Kitchen open for orders' : 'Kitchen closed for orders', 'info');
               }}
             />
           </div>

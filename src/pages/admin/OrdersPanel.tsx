@@ -21,6 +21,7 @@ const FILTERS: (OrderStatus | 'ALL' | 'ACTIVE')[] = [
   'PREPARING',
   'READY',
   'SERVED',
+  'CANCELLED',
   'ALL',
 ];
 
@@ -280,6 +281,18 @@ function OrderDetail({ order }: { order: Order }) {
             {STATUS_META[s].label}
           </button>
         ))}
+        {order.status !== 'CANCELLED' && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Cancel order #${order.code}?`)) {
+                actions.setOrderStatus(order.id, 'CANCELLED', 'Manager');
+              }
+            }}
+            className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[12px] font-bold uppercase tracking-[0.06em] text-rose-700 hover:bg-rose-100 transition"
+          >
+            Cancel Order
+          </button>
+        )}
       </div>
 
       <div className="mt-5 space-y-3">

@@ -11,6 +11,7 @@ import {
   NotebookPen,
   Volume2,
   VolumeX,
+  XCircle,
 } from 'lucide-react';
 import { actions, useCalls, useOrders, useSettings } from '../lib/store';
 import { clockTime, elapsed } from '../lib/format';
@@ -34,9 +35,11 @@ export default function KitchenPage() {
   });
   const [flash, setFlash] = useState<string | null>(null);
   const [callAlert, setCallAlert] = useState<{ tableCode: string; reason: string } | null>(null);
+  const [cancelAlert, setCancelAlert] = useState<{ code: string; tableCode: string; by?: string } | null>(null);
   const [, tick] = useState(0);
   const seen = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
   const seenCalls = useRef<Set<string>>(new Set(calls.map((c) => c.id)));
+  const seenCancelled = useRef<Set<string>>(new Set(orders.filter((o) => o.status === 'CANCELLED').map((o) => o.id)));
 
   useEffect(() => {
     const i = setInterval(() => tick((n) => n + 1), 1000);
@@ -52,6 +55,20 @@ export default function KitchenPage() {
       setFlash(newest.code);
       if (sound) chime();
       const t = setTimeout(() => setFlash(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [orders, sound]);
+
+  // Track cancelled orders in kitchen
+  useEffect(() => {
+    const freshCancelled = orders.filter((o) => o.status === 'CANCELLED' && !seenCancelled.current.has(o.id));
+    if (freshCancelled.length) {
+      freshCancelled.forEach((o) => seenCancelled.current.add(o.id));
+      const newest = freshCancelled[0];
+      const by = newest.timeline.slice().reverse().find((t) => t.status === 'CANCELLED')?.by;
+      setCancelAlert({ code: newest.code, tableCode: newest.tableCode, by });
+      if (sound) chime();
+      const t = setTimeout(() => setCancelAlert(null), 7000);
       return () => clearTimeout(t);
     }
   }, [orders, sound]);
@@ -150,6 +167,24 @@ export default function KitchenPage() {
               </span>
               <span className="text-[12px] font-bold text-stone-900/90 block">
                 Reason: {callAlert.reason}
+              </span>
+            </div>
+          </motion.div>
+        )}
+        {cancelAlert && (
+          <motion.div
+            initial={{ y: -30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -30, opacity: 0 }}
+            className="fixed left-1/2 top-20 z-50 -translate-x-1/2 flex items-center gap-3 rounded-2xl bg-rose-600 px-6 py-3.5 text-white shadow-2xl border-2 border-rose-400 font-bold"
+          >
+            <XCircle size={24} className="shrink-0 text-white animate-pulse" />
+            <div className="text-left">
+              <span className="text-[16px] uppercase tracking-wide block">
+                🚫 ORDER #{cancelAlert.code} CANCELLED!
+              </span>
+              <span className="text-[12px] font-medium text-rose-100 block">
+                Table {cancelAlert.tableCode} · {cancelAlert.by || 'Customer cancelled'} — Stop cooking
               </span>
             </div>
           </motion.div>

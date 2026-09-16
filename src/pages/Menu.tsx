@@ -822,13 +822,27 @@ export default function MenuPage() {
                       </p>
                     ))}
                   </div>
-                  <Link
-                    to={`/order/${o.code}`}
-                    onClick={() => setOrdersSheetOpen(false)}
-                    className="mt-3 block text-center rounded-xl bg-[#18392B] py-2 text-xs font-bold text-white transition hover:bg-[#122A20]"
-                  >
-                    View Live Order Tracker →
-                  </Link>
+                  <div className="mt-3 flex gap-2">
+                    <Link
+                      to={`/order/${o.code}`}
+                      onClick={() => setOrdersSheetOpen(false)}
+                      className="flex-1 block text-center rounded-xl bg-[#18392B] py-2 text-xs font-bold text-white transition hover:bg-[#122A20]"
+                    >
+                      Track Order →
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Cancel order #${o.code}? The kitchen will stop cooking.`)) {
+                          actions.setOrderStatus(o.id, 'CANCELLED', 'Customer');
+                          toast(`Order #${o.code} has been cancelled`, 'info');
+                        }
+                      }}
+                      className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100 active:scale-95"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
