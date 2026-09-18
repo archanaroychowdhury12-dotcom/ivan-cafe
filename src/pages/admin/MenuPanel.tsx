@@ -1,20 +1,24 @@
 import { useMemo, useState } from 'react';
 import {
+  ArrowUpDown,
   CircleSlash,
   ImagePlus,
+  MessageSquare,
   Pencil,
   Plus,
   Search,
+  Star,
   Tag,
   Trash2,
   Upload,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
-import { actions, useCategories, useItems } from '../../lib/store';
-import { money, uid } from '../../lib/format';
-import type { AddonGroup, Category, MenuItem } from '../../lib/types';
+import { actions, useCategories, useItems, useOrders } from '../../lib/store';
+import { clockTime, dayLabel, money, uid } from '../../lib/format';
+import type { AddonGroup, Category, MenuItem, ItemRatingStats } from '../../lib/types';
 import { Button, Chip, EmptyState, Field, Sheet, Toggle, inputCx, useToast } from '../../components/ui';
+import { getAllItemRatings } from '../../lib/reviews';
 
 const IMAGE_PRESETS = [
   '/menu/latte.jpg',
@@ -46,21 +50,46 @@ const blank = (categoryId: string): MenuItem => ({
 export default function MenuPanel() {
   const items = useItems();
   const categories = useCategories();
+  const orders = useOrders();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
+  const [sortBy, setSortBy] = useState<'default' | 'rating' | 'reviews' | 'price-asc' | 'price-desc'>('default');
   const [editing, setEditing] = useState<MenuItem | null>(null);
   const [catOpen, setCatOpen] = useState(false);
+  const [reviewItem, setReviewItem] = useState<MenuItem | null>(null);
 
-  const list = useMemo(
-    () =>
-      items.filter(
-        (i) =>
-          (cat === 'all' || i.categoryId === cat) &&
-          (!q || (i.name + i.description).toLowerCase().includes(q.toLowerCase())),
-      ),
-    [items, cat, q],
-  );
+  const ratingsMap = useMemo(() => getAllItemRatings(items, orders), [items, orders]);
+
+  const list = useMemo(() => {
+    const filtered = items.filter(
+      (i) =>
+        (cat === 'all' || i.categoryId === cat) &&
+        (!q || (i.name + i.description).toLowerCase().includes(q.toLowerCase())),
+    );
+
+    if (sortBy === 'rating') {
+      return [...filtered].sort((a, b) => {
+        const rA = ratingsMap.get(a.id)?.averageRating || 0;
+        const rB = ratingsMap.get(b.id)?.averageRating || 0;
+        return rB - rA;
+      });
+    }
+    if (sortBy === 'reviews') {
+      return [...filtered].sort((a, b) => {
+        const rA = ratingsMap.get(a.id)?.totalReviews || 0;
+        const rB = ratingsMap.get(b.id)?.totalReviews || 0;
+        return rB - rA;
+      });
+    }
+    if (sortBy === 'price-asc') {
+      return [...filtered].sort((a, b) => a.price - b.price);
+    }
+    if (sortBy === 'price-desc') {
+      return [...filtered].sort((a, b) => b.price - a.price);
+    }
+    return filtered;
+  }, [items, cat, q, sortBy, ratingsMap]);
 
   return (
     <div className="space-y-5">
@@ -93,6 +122,64 @@ export default function MenuPanel() {
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-y border-line/60 py-2">
+        <div className="flex flex-wrap items-center gap-1.5 text-mocha font-medium">
+          <ArrowUpDown size={14} />
+          <span>Sort by:</span>
+          <button
+            type="button"
+            onClick={() => setSortBy('default')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition ${
+              sortBy === 'default' ? 'bg-ink text-white shadow-xs' : 'bg-paper text-mocha hover:text-ink'
+            }`}
+          >
+            Default
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy('rating')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+              sortBy === 'rating'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+            }`}
+          >
+            <Star size={11} className="fill-current" /> Highest Rated
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy('reviews')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition ${
+              sortBy === 'reviews' ? 'bg-ink text-white shadow-xs' : 'bg-paper text-mocha hover:text-ink'
+            }`}
+          >
+            Most Reviewed
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy('price-asc')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition ${
+              sortBy === 'price-asc' ? 'bg-ink text-white shadow-xs' : 'bg-paper text-mocha hover:text-ink'
+            }`}
+          >
+            Price ↑
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy('price-desc')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition ${
+              sortBy === 'price-desc' ? 'bg-ink text-white shadow-xs' : 'bg-paper text-mocha hover:text-ink'
+            }`}
+          >
+            Price ↓
+          </button>
+        </div>
+
+        <div className="text-[11.5px] font-bold text-amber-900 bg-amber-50/80 px-2.5 py-1 rounded-full border border-amber-200">
+          ⭐ Verified Diner Ratings Active
+        </div>
+      </div>
+
       {list.length === 0 ? (
         <EmptyState
           icon={<UtensilsCrossed size={22} />}
@@ -109,83 +196,278 @@ export default function MenuPanel() {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {list.map((i) => (
-            <article
-              key={i.id}
-              className="group overflow-hidden rounded-[24px] border border-line bg-paper shadow-card transition hover:-translate-y-0.5 hover:shadow-lift"
-            >
-              <div className="relative h-32 overflow-hidden">
-                <img
-                  src={i.image}
-                  alt={i.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/60 to-transparent" />
-                <div className="absolute left-3 top-3 flex gap-1.5">
-                  {i.popular && (
-                    <span className="rounded-full bg-paper/90 px-2 py-0.5 text-[10px] font-bold uppercase text-ember-deep">
-                      Popular
-                    </span>
+          {list.map((i) => {
+            const rStats = ratingsMap.get(i.id);
+            return (
+              <article
+                key={i.id}
+                className="group overflow-hidden rounded-[24px] border border-line bg-paper shadow-card transition hover:-translate-y-0.5 hover:shadow-lift"
+              >
+                <div className="relative h-32 overflow-hidden">
+                  <img
+                    src={i.image}
+                    alt={i.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/60 to-transparent" />
+                  <div className="absolute left-3 top-3 flex gap-1.5">
+                    {i.popular && (
+                      <span className="rounded-full bg-paper/90 px-2 py-0.5 text-[10px] font-bold uppercase text-ember-deep">
+                        Popular
+                      </span>
+                    )}
+                    {i.soldOut && (
+                      <span className="rounded-full bg-berry px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                        Sold out
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Rating Badge on Image */}
+                  {rStats && (
+                    <button
+                      type="button"
+                      onClick={() => setReviewItem(i)}
+                      className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/95 backdrop-blur px-2.5 py-1 text-[11px] font-black text-amber-950 shadow-sm border border-amber-300 hover:scale-105 active:scale-95 transition"
+                      title="View verified customer reviews"
+                    >
+                      <Star size={12} className="fill-amber-500 text-amber-500" />
+                      <span>{rStats.averageRating}</span>
+                      <span className="text-[9.5px] font-medium text-stone-500">({rStats.totalReviews})</span>
+                    </button>
                   )}
-                  {i.soldOut && (
-                    <span className="rounded-full bg-berry px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-                      Sold out
-                    </span>
-                  )}
+
+                  <p className="absolute bottom-2.5 left-3 right-3 truncate font-display text-[16px] font-semibold text-cream">
+                    {i.name}
+                  </p>
                 </div>
-                <p className="absolute bottom-2.5 left-3 right-3 truncate font-display text-[16px] font-semibold text-cream">
-                  {i.name}
-                </p>
-              </div>
-              <div className="p-3.5">
-                <p className="line-clamp-2 min-h-[34px] text-[12px] leading-relaxed text-mocha">
-                  {i.description}
-                </p>
-                <div className="mt-2.5 flex items-center justify-between">
-                  <span className="font-display text-[17px] font-semibold">{money(i.price)}</span>
-                  <span className="text-[11px] font-semibold text-mocha">
-                    {i.addonGroups.length} option groups
-                  </span>
+                <div className="p-3.5">
+                  <p className="line-clamp-2 min-h-[34px] text-[12px] leading-relaxed text-mocha">
+                    {i.description}
+                  </p>
+                  <div className="mt-2.5 flex items-center justify-between">
+                    <span className="font-display text-[17px] font-semibold">{money(i.price)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setReviewItem(i)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900 border border-amber-200/70 hover:bg-amber-100 transition"
+                    >
+                      <Star size={11} className="fill-amber-500 text-amber-500" />
+                      <span>{rStats?.averageRating || 4.5} ({rStats?.totalReviews || 0} reviews)</span>
+                    </button>
+                  </div>
+                  <div className="mt-3 flex gap-1.5">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditing(i)}>
+                      <Pencil size={13} /> Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setReviewItem(i)}
+                      title="View all customer reviews for this dish"
+                      className="text-amber-900 border-amber-200 hover:bg-amber-50"
+                    >
+                      <Star size={13} className="fill-amber-500 text-amber-500" /> Reviews
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={i.soldOut ? 'soft' : 'ghost'}
+                      onClick={() => {
+                        actions.toggleSoldOut(i.id);
+                        toast(i.soldOut ? `${i.name} is back on the menu` : `${i.name} marked sold out`, 'info');
+                      }}
+                      title="Toggle sold out"
+                    >
+                      <CircleSlash size={13} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        if (confirm(`Delete “${i.name}” from the menu?`)) {
+                          actions.deleteItem(i.id);
+                          toast('Item deleted', 'info');
+                        }
+                      }}
+                      title="Delete"
+                    >
+                      <Trash2 size={13} className="text-berry" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="mt-3 flex gap-1.5">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditing(i)}>
-                    <Pencil size={13} /> Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={i.soldOut ? 'soft' : 'ghost'}
-                    onClick={() => {
-                      actions.toggleSoldOut(i.id);
-                      toast(i.soldOut ? `${i.name} is back on the menu` : `${i.name} marked sold out`, 'info');
-                    }}
-                    title="Toggle sold out"
-                  >
-                    <CircleSlash size={13} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      if (confirm(`Delete “${i.name}” from the menu?`)) {
-                        actions.deleteItem(i.id);
-                        toast('Item deleted', 'info');
-                      }
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 size={13} className="text-berry" />
-                  </Button>
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 
       <ItemEditor item={editing} onClose={() => setEditing(null)} />
       <CategoryManager open={catOpen} onClose={() => setCatOpen(false)} />
+      <DishReviewsSheet
+        item={reviewItem}
+        stats={reviewItem ? ratingsMap.get(reviewItem.id) : null}
+        onClose={() => setReviewItem(null)}
+      />
     </div>
   );
+}
+
+/* ------------------------------- dish reviews sheet ------------------------------ */
+
+function DishReviewsSheet({
+  item,
+  stats,
+  onClose,
+}: {
+  item: MenuItem | null;
+  stats: ItemRatingStats | null | undefined;
+  onClose: () => void;
+}) {
+  if (!item || !stats) return null;
+
+  const total = stats.totalReviews;
+
+  return (
+    <Sheet open={!!item} onClose={onClose} title="Customer Ratings & Feedback">
+      <div className="space-y-5 px-5 py-4">
+        {/* Dish Summary Banner */}
+        <div className="flex items-center gap-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 p-3.5">
+          <img
+            src={item.image}
+            alt={item.name}
+            className="h-16 w-16 rounded-xl object-cover border border-amber-200 shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-editorial text-lg font-bold text-stone-900 truncate">
+              {item.name}
+            </h3>
+            <p className="text-xs text-stone-500 line-clamp-1">{item.description}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="font-display text-sm font-bold text-stone-900">
+                {money(item.price)}
+              </span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                {stats.satisfactionPercent}% Loved
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Big Rating Scorecard */}
+        <div className="rounded-2xl border border-line bg-paper p-4 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <Star size={30} className="fill-amber-500 text-amber-500" />
+            <span className="font-display text-4xl font-extrabold text-stone-900">
+              {stats.averageRating}
+            </span>
+            <span className="text-sm font-bold text-stone-400 self-end mb-1">/ 5.0</span>
+          </div>
+          <p className="mt-1 text-xs text-mocha">
+            Based on <strong>{total}</strong> verified customer reviews from dining tables
+          </p>
+
+          {/* Star Distribution Progress Bars */}
+          <div className="mt-4 space-y-1.5 text-xs text-stone-600 max-w-xs mx-auto">
+            {([5, 4, 3, 2, 1] as const).map((star) => {
+              const count = stats.starCounts[star] || 0;
+              const pct = total > 0 ? (count / total) * 100 : 0;
+              return (
+                <div key={star} className="flex items-center gap-2">
+                  <span className="w-6 text-right font-bold text-stone-700">{star}★</span>
+                  <div className="flex-1 h-2 rounded-full bg-stone-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-8 text-left text-[11px] text-stone-400 font-mono">
+                    {count}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Customer Reviews List */}
+        <div>
+          <h4 className="font-display text-sm font-bold text-stone-900 mb-3 flex items-center justify-between">
+            <span>Verified Diner Reviews</span>
+            <span className="text-xs text-mocha font-normal">{stats.recentReviews.length} entries</span>
+          </h4>
+
+          {stats.recentReviews.length === 0 ? (
+            <div className="text-center py-6 text-xs text-mocha bg-stone-50 rounded-2xl border border-stone-200/60">
+              No detailed comments left yet. Live customer reviews will appear here once served.
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+              {stats.recentReviews.map((rev, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl border border-line bg-paper p-3.5 shadow-2xs space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-amber-100 text-amber-900 font-bold text-xs">
+                        {rev.customerName.slice(0, 1).toUpperCase()}
+                      </span>
+                      <div>
+                        <p className="text-xs font-bold text-stone-900 leading-none">
+                          {rev.customerName}
+                        </p>
+                        <p className="text-[10.5px] text-mocha mt-0.5">
+                          Table {rev.tableCode} · {dayLabel(rev.createdAt)} at {clockTime(rev.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          size={12}
+                          className={
+                            s <= rev.rating
+                              ? 'fill-amber-500 text-amber-500'
+                              : 'text-stone-200'
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {rev.tags && rev.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {rev.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-900 border border-amber-200/60"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {rev.comment && (
+                    <p className="text-[12px] text-stone-700 bg-[#FDFBF7] rounded-xl p-2.5 italic border border-stone-150">
+                      "{rev.comment}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Button full size="lg" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Sheet>
+  );
+}
 }
 
 /* ------------------------------- item editor ------------------------------ */

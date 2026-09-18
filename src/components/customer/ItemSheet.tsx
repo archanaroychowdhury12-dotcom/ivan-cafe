@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Check, Minus, Plus, Timer } from 'lucide-react';
-import type { CartLine, MenuItem } from '../../lib/types';
+import { Check, Minus, Plus, Star, Timer } from 'lucide-react';
+import type { CartLine, MenuItem, ItemRatingStats } from '../../lib/types';
 import { money, uid } from '../../lib/format';
 import { Button, Sheet } from '../ui';
 
@@ -9,11 +9,13 @@ export function ItemSheet({
   open,
   onClose,
   onAdd,
+  ratingStats,
 }: {
   item: MenuItem | null;
   open: boolean;
   onClose: () => void;
   onAdd: (line: CartLine) => void;
+  ratingStats?: ItemRatingStats;
 }) {
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
@@ -110,6 +112,38 @@ export function ItemSheet({
           <span className="h-3 w-px bg-line" />
           <span>{item.veg ? 'Vegetarian' : 'Non-vegetarian'}</span>
         </div>
+
+        {ratingStats && ratingStats.totalReviews > 0 && (
+          <div className="mt-3.5 rounded-2xl bg-[#FFFDF7] border border-amber-300/70 p-3.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-amber-500">
+                  <Star size={17} className="fill-amber-500" />
+                  <span className="font-display text-lg font-bold text-stone-900">
+                    {ratingStats.averageRating}
+                  </span>
+                  <span className="text-[11px] text-stone-500 font-medium">/ 5.0</span>
+                </div>
+                <span className="text-xs text-stone-500 font-medium">
+                  ({ratingStats.totalReviews} reviews)
+                </span>
+              </div>
+              <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5">
+                {ratingStats.satisfactionPercent}% Loved This
+              </span>
+            </div>
+
+            {/* If recent customer quotes exist, show snippet */}
+            {ratingStats.recentReviews.some((r) => r.comment) && (
+              <div className="mt-2 pt-2 border-t border-amber-200/50 text-[11.5px] text-stone-700 italic">
+                "{ratingStats.recentReviews.find((r) => r.comment)?.comment}"
+                <span className="not-italic text-[10px] text-stone-400 ml-1.5 font-medium">
+                  — {ratingStats.recentReviews.find((r) => r.comment)?.customerName}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {item.addonGroups.map((g) => {
           const isMissing = touched && g.required && (sel[g.id] ?? []).length === 0;

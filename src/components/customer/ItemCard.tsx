@@ -98,6 +98,10 @@ export function ItemCard({
             <span className="absolute left-1.5 top-1.5 rounded-full bg-stone-900/90 px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-wider text-white shadow-xs">
               Sold Out
             </span>
+          ) : ratingStats && ratingStats.averageRating >= 4.8 && ratingStats.totalReviews >= 15 ? (
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-700 px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
+              <Star size={8} className="fill-amber-300 text-amber-300" /> MOST LOVED
+            </span>
           ) : isPopular ? (
             <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#E5A93C] px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
               <Star size={8} className="fill-white text-white" /> POPULAR
@@ -142,19 +146,34 @@ export function ItemCard({
         {/* BOTTOM: Content */}
         <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
           <div>
-            <h3 className="font-editorial text-[14px] sm:text-[15px] font-bold leading-tight text-stone-900 group-hover:text-amber-900 transition-colors line-clamp-1">
-              {item.name}
-            </h3>
+            <div className="flex items-start justify-between gap-1">
+              <h3 className="font-editorial text-[14px] sm:text-[15px] font-bold leading-tight text-stone-900 group-hover:text-amber-900 transition-colors line-clamp-1 flex-1">
+                {item.name}
+              </h3>
+              {ratingStats && ratingStats.totalReviews > 0 && (
+                <span className="inline-flex items-center gap-0.5 shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-200/60">
+                  <Star size={9} className="fill-amber-500 text-amber-500" />
+                  <span>{ratingStats.averageRating}</span>
+                </span>
+              )}
+            </div>
 
             <p className="mt-1 line-clamp-2 text-[10.5px] sm:text-[11px] leading-snug text-stone-500">
               {item.description}
             </p>
 
-            {item.addonGroups.length > 0 && (
-              <p className="mt-1 text-[10px] font-semibold text-[#D97706] flex items-center gap-0.5">
-                <Settings2 size={10} /> Customise
-              </p>
-            )}
+            <div className="mt-1 flex items-center justify-between">
+              {item.addonGroups.length > 0 ? (
+                <p className="text-[10px] font-semibold text-[#D97706] flex items-center gap-0.5">
+                  <Settings2 size={10} /> Customise
+                </p>
+              ) : <span />}
+              {ratingStats && ratingStats.totalReviews > 0 && (
+                <span className="text-[9.5px] font-medium text-stone-400">
+                  {ratingStats.totalReviews} reviews
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Price and Action Row */}
@@ -239,6 +258,10 @@ export function ItemCard({
             <span className="absolute left-1.5 top-1.5 rounded-full bg-stone-900/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-xs">
               Sold Out
             </span>
+          ) : ratingStats && ratingStats.averageRating >= 4.8 && ratingStats.totalReviews >= 15 ? (
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-600 to-amber-700 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-xs">
+              <Star size={8} className="fill-amber-300 text-amber-300" /> MOST LOVED
+            </span>
           ) : isPopular ? (
             <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-[#E5A93C] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-xs">
               <Star size={8} className="fill-white text-white" /> POPULAR
@@ -291,6 +314,14 @@ export function ItemCard({
 
           {/* Tag Pills & Customise */}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {ratingStats && ratingStats.totalReviews > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold text-amber-900 border border-amber-200/60">
+                <Star size={10} className="fill-amber-500 text-amber-500" />
+                <span>{ratingStats.averageRating}</span>
+                <span className="text-[9px] font-medium text-stone-400">({ratingStats.totalReviews})</span>
+              </span>
+            )}
+
             {item.tags.slice(0, 2).map((t) => (
               <span
                 key={t}

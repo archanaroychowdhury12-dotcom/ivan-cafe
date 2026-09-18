@@ -68,7 +68,6 @@ export default function OrderStatusPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState(CANCEL_REASONS[0]);
   const [cancelNote, setCancelNote] = useState('');
-  const [qrTab, setQrTab] = useState<'code' | 'photo'>('code');
   const [billRequested, setBillRequested] = useState(false);
   const [reason, setReason] = useState<CallReason>('Assistance');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -845,28 +844,6 @@ export default function OrderStatusPage() {
             <p className="text-[11px] text-stone-500 mt-1">Order #{order.code} · Table {order.tableCode}</p>
           </div>
 
-          {/* UPI Mode Tabs */}
-          <div className="flex rounded-xl bg-stone-100 p-1">
-            <button
-              type="button"
-              onClick={() => setQrTab('code')}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                qrTab === 'code' ? 'bg-white text-[#5f259f] shadow-sm' : 'text-stone-500 hover:text-stone-800'
-              }`}
-            >
-              📱 Dynamic QR ({money(order.total)})
-            </button>
-            <button
-              type="button"
-              onClick={() => setQrTab('photo')}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                qrTab === 'photo' ? 'bg-white text-[#5f259f] shadow-sm' : 'text-stone-500 hover:text-stone-800'
-              }`}
-            >
-              🖼️ Counter Stand QR
-            </button>
-          </div>
-
           {/* QR Display Card */}
           <div className="rounded-2xl border border-stone-200 bg-white p-4 text-center space-y-3 shadow-sm">
             <div className="flex items-center justify-center gap-2">
@@ -876,32 +853,17 @@ export default function OrderStatusPage() {
               <p className="text-sm font-bold text-stone-900">PhonePe / UPI Scan & Pay</p>
             </div>
 
-            {qrTab === 'code' ? (
-              <div className="flex flex-col items-center">
-                <div className="p-3 bg-white border-2 border-[#5f259f]/25 rounded-2xl shadow-sm inline-block">
-                  <QRImage
-                    value={`upi://pay?pa=Q438109503@ybl&pn=Ivan%20Food%20Court&am=${order.total}&cu=INR&tn=Order%20${order.code}`}
-                    size={190}
-                  />
-                </div>
-                <p className="mt-2 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Pre-filled with exact amount {money(order.total)}
-                </p>
+            <div className="flex flex-col items-center">
+              <div className="p-3 bg-white border-2 border-[#5f259f]/25 rounded-2xl shadow-sm inline-block">
+                <QRImage
+                  value={`upi://pay?pa=Q438109503@ybl&pn=Ivan%20Food%20Court&am=${order.total}&cu=INR&tn=Order%20${order.code}`}
+                  size={190}
+                />
               </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <div className="overflow-hidden rounded-2xl border-2 border-stone-200 max-w-[220px] shadow-sm">
-                  <img
-                    src="/brand/phonepe_qr.jpg"
-                    alt="PhonePe Counter QR"
-                    className="w-full h-auto object-cover max-h-[260px]"
-                  />
-                </div>
-                <p className="mt-2 text-[11px] text-stone-500">
-                  Matches our counter PhonePe stand
-                </p>
-              </div>
-            )}
+              <p className="mt-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Pre-filled with exact bill amount {money(order.total)}
+              </p>
+            </div>
 
             <div>
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">UPI ID</p>

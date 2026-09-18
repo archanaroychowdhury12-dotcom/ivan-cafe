@@ -34,6 +34,7 @@ import { BottomNav } from '../components/customer/BottomNav';
 import { Button, Chip, EmptyState, Sheet, useToast } from '../components/ui';
 import { Mark } from '../components/Brand';
 import { blip, formatTableSpeech, playStaffCallAlert } from '../lib/sound';
+import { getAllItemRatings } from '../lib/reviews';
 
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
@@ -42,6 +43,8 @@ const getCategoryIcon = (id: string) => {
   switch (id) {
     case 'all':
       return LayoutGrid;
+    case 'top-rated':
+      return Sparkles;
     case 'c-tea':
       return Leaf;
     case 'c-coffee':
@@ -93,6 +96,8 @@ const getCategoryHeaderIcon = (id: string, emoji?: string) => {
       return '🍹';
     case 'c-egg-lolly':
       return '🍳';
+    case 'top-rated':
+      return '⭐';
     default:
       return emoji || '🍽️';
   }
@@ -100,6 +105,8 @@ const getCategoryHeaderIcon = (id: string, emoji?: string) => {
 
 const getCategorySubtitle = (id: string) => {
   switch (id) {
+    case 'top-rated':
+      return 'Customer favorites ranked by highest verified ratings & satisfaction!';
     case 'c-chicken-snacks':
       return 'Crispy, flavorful and always a good choice!';
     case 'c-coffee':
@@ -210,25 +217,52 @@ export default function MenuPage() {
   const qtyOf = (id: string) =>
     lines.filter((l) => l.itemId === id).reduce((s, l) => s + l.qty, 0);
 
+  const ratingsMap = useMemo(() => getAllItemRatings(items, orders), [items, orders]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((i) => {
+    const base = items.filter((i) => {
       const matchQ =
         !q ||
         i.name.toLowerCase().includes(q) ||
         i.description.toLowerCase().includes(q) ||
         i.tags.join(' ').toLowerCase().includes(q);
-      const matchC = activeCat === 'all' || i.categoryId === activeCat;
+      const matchC = activeCat === 'all' || activeCat === 'top-rated' || i.categoryId === activeCat;
       return matchQ && matchC;
     });
-  }, [items, query, activeCat]);
+
+    if (activeCat === 'top-rated') {
+      return [...base].sort((a, b) => {
+        const statsA = ratingsMap.get(a.id);
+        const statsB = ratingsMap.get(b.id);
+        const scoreA = (statsA?.averageRating || 0) * 100 + (statsA?.totalReviews || 0);
+        const scoreB = (statsB?.averageRating || 0) * 100 + (statsB?.totalReviews || 0);
+        return scoreB - scoreA;
+      });
+    }
+
+    return base;
+  }, [items, query, activeCat, ratingsMap]);
 
   // Group items by category
   const grouped = useMemo(() => {
+    if (activeCat === 'top-rated') {
+      return [
+        {
+          cat: {
+            id: 'top-rated',
+            name: '⭐ Most Loved & Top Rated Dishes',
+            emoji: '⭐',
+            sort: 0,
+          },
+          list: filtered,
+        },
+      ];
+    }
     return categories
       .map((c) => ({ cat: c, list: filtered.filter((i) => i.categoryId === c.id) }))
       .filter((g) => g.list.length > 0);
-  }, [categories, filtered]);
+  }, [categories, filtered, activeCat]);
 
   // Find Chinese Sizzler or special item for Kitchen Display section
   const specialItem = items.find(
@@ -561,6 +595,20 @@ export default function MenuPage() {
             <span>All</span>
           </button>
 
+          {/* Top Rated / Most Loved Category Pill */}
+          <button
+            type="button"
+            onClick={() => setActiveCat('top-rated')}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all shrink-0 text-[12.5px] font-bold shadow-2xs ${
+              activeCat === 'top-rated'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 shadow-sm ring-1 ring-amber-600 font-black'
+                : 'bg-amber-50 text-amber-900 border border-amber-300/80 hover:bg-amber-100/70'
+            }`}
+          >
+            <Sparkles size={15} strokeWidth={2.5} className={activeCat === 'top-rated' ? 'text-stone-950' : 'text-amber-600'} />
+            <span>⭐ Top Rated / Most Loved</span>
+          </button>
+
           {/* Dynamic Category Pills */}
           {categories.map((c) => {
             const Icon = getCategoryIcon(c.id);
@@ -681,6 +729,7 @@ export default function MenuPage() {
                       onOpen={() => setSheetItem(item)}
                       onDirectAdd={(qty) => handleDirectAdd(item, qty)}
                       onDirectRemove={() => handleDirectRemove(item)}
+                      ratingStats={ratingsMap.get(item.id)}
                     />
                   ))}
                 </div>
@@ -752,6 +801,7 @@ export default function MenuPage() {
           blip();
           toast(`${line.name} added to cart`);
         }}
+        ratingStats={sheetItem ? ratingsMap.get(sheetItem.id) : undefined}
       />
 
       {/* Table & Dining Option Modal */}
