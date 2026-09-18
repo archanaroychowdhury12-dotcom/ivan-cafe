@@ -5,17 +5,22 @@ import {
   AlertTriangle,
   ArrowLeft,
   BellRing,
+  Check,
   CheckCircle2,
   Copy,
   ExternalLink,
+  Heart,
   Image as ImageIcon,
   MapPin,
+  MessageSquareHeart,
   NotebookPen,
   Receipt,
   SearchX,
+  Send,
   Smartphone,
   Sparkles,
   Star,
+  ThumbsUp,
   Utensils,
   XCircle,
 } from 'lucide-react';
@@ -30,6 +35,15 @@ import { mapOrderFromDb, supabase } from '../lib/supabase';
 
 const GOOGLE_MAPS_REVIEW_URL = 'https://maps.app.goo.gl/FWKo4hBFPVtqYvph9?g_st=ic';
 const FACEBOOK_CHANNEL_URL = 'https://www.facebook.com/share/1Dhjd93nm1/?mibextid=wwXIfr';
+
+const QUICK_REVIEW_TAGS = [
+  'Delicious 😍',
+  'Very Tasty 🔥',
+  'Fresh & Hot ✨',
+  'Loved It ❤️',
+  'Good Portion 👌',
+  'Average 😐',
+];
 
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
@@ -59,6 +73,11 @@ export default function OrderStatusPage() {
   const [reason, setReason] = useState<CallReason>('Assistance');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [rating, setRating] = useState(5);
+  const [itemRatings, setItemRatings] = useState<
+    Record<string, { rating: number; comment: string; tags: string[] }>
+  >({});
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [overallFeedback, setOverallFeedback] = useState('');
 
   useEffect(() => {
     const i = setInterval(() => tick((n) => n + 1), 1000);
@@ -140,6 +159,65 @@ export default function OrderStatusPage() {
     2,
     Math.round(order.lines.reduce((m, l) => Math.max(m, 8 + l.qty * 2), 8) - (Date.now() - order.createdAt) / 60000),
   );
+
+  useEffect(() => {
+    if (!order) return;
+    const initial: Record<string, { rating: number; comment: string; tags: string[] }> = {};
+    order.lines.forEach((l) => {
+      initial[l.lineId] = {
+        rating: l.rating || 5,
+        comment: l.reviewComment || '',
+        tags: l.reviewTags || (l.rating && l.rating >= 4 ? ['Delicious 😍'] : []),
+      };
+    });
+    setItemRatings(initial);
+  }, [order?.id, order?.lines]);
+
+  const handleItemRatingChange = (lineId: string, newRating: number) => {
+    setItemRatings((prev) => ({
+      ...prev,
+      [lineId]: {
+        ...(prev[lineId] || { comment: '', tags: [] }),
+        rating: newRating,
+      },
+    }));
+  };
+
+  const handleTagToggle = (lineId: string, tag: string) => {
+    setItemRatings((prev) => {
+      const cur = prev[lineId] || { rating: 5, comment: '', tags: [] };
+      const exists = cur.tags.includes(tag);
+      const newTags = exists ? cur.tags.filter((t) => t !== tag) : [...cur.tags, tag];
+      return {
+        ...prev,
+        [lineId]: {
+          ...cur,
+          tags: newTags,
+        },
+      };
+    });
+  };
+
+  const handleCommentChange = (lineId: string, comment: string) => {
+    setItemRatings((prev) => ({
+      ...prev,
+      [lineId]: {
+        ...(prev[lineId] || { rating: 5, tags: [] }),
+        comment,
+      },
+    }));
+  };
+
+  const isOrderReviewed = Boolean(
+    order?.reviewedAt || order?.lines.some((l) => l.rating && l.rating > 0),
+  );
+
+  const handleSubmitItemReviews = async () => {
+    if (!order) return;
+    await actions.submitOrderReview(order.id, itemRatings, overallFeedback);
+    setIsEditingReview(false);
+    toast('Thank you for rating your dishes! Feedback saved.', 'success');
+  };
 
   const handleCancelOrder = () => {
     if (!order) return;
@@ -482,26 +560,253 @@ export default function OrderStatusPage() {
       )}
 
       {order.status === 'SERVED' && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mx-4 mt-4 rounded-[24px] border border-olive/30 bg-olive/10 p-4 space-y-3"
-        >
-          <div className="flex items-center gap-3">
-            <CheckCircle2 size={22} className="text-olive shrink-0" />
-            <p className="text-[13px] font-medium text-ink-soft">
-              Order complete. Thank you for dining at {settings.cafeName} — we hope to see you again soon!
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedbackOpen(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-xs py-2.5 shadow-sm transition active:scale-95"
+        <section className="px-4 pt-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="rounded-[26px] border border-amber-500/30 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/30 p-4 sm:p-5 shadow-card space-y-4"
           >
-            <Star size={15} className="fill-stone-950 text-stone-950" />
-            <span>Give Optional Feedback &amp; Follow Channels</span>
-          </button>
-        </motion.div>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500 text-stone-950 font-bold shadow-sm">
+                  <Star size={20} className="fill-stone-950" />
+                </div>
+                <div>
+                  <h3 className="font-display text-[16px] font-bold text-stone-900 leading-tight">
+                    {isOrderReviewed && !isEditingReview
+                      ? 'Your Dish Reviews & Feedback'
+                      : 'Rate The Dishes You Enjoyed'}
+                  </h3>
+                  <p className="text-[11px] font-medium text-stone-600">
+                    {isOrderReviewed && !isEditingReview
+                      ? 'Thank you! Your ratings help our chefs and other diners.'
+                      : 'How was the food? Rate each item served to your table.'}
+                  </p>
+                </div>
+              </div>
+              {isOrderReviewed && !isEditingReview && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingReview(true)}
+                  className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-800 shadow-xs hover:bg-stone-50 active:scale-95 transition"
+                >
+                  Edit Ratings
+                </button>
+              )}
+            </div>
+
+            {/* If already reviewed and not editing: show reviewed summary */}
+            {isOrderReviewed && !isEditingReview ? (
+              <div className="space-y-2.5 pt-1">
+                {order.lines.map((l) => {
+                  const r = l.rating || itemRatings[l.lineId]?.rating || 5;
+                  const comment = l.reviewComment || itemRatings[l.lineId]?.comment;
+                  const tags = l.reviewTags || itemRatings[l.lineId]?.tags || [];
+
+                  return (
+                    <div
+                      key={l.lineId}
+                      className="rounded-2xl border border-stone-200/80 bg-white p-3 shadow-xs space-y-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={l.image}
+                          alt={l.name}
+                          className="h-12 w-12 rounded-xl object-cover border border-stone-200"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-bold text-stone-900 truncate">
+                            {l.qty} × {l.name}
+                          </p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={14}
+                                className={
+                                  star <= r
+                                    ? 'fill-amber-500 text-amber-500'
+                                    : 'text-stone-200'
+                                }
+                              />
+                            ))}
+                            <span className="ml-1 text-[11px] font-bold text-amber-800">
+                              {r} / 5
+                            </span>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          Reviewed ✓
+                        </span>
+                      </div>
+
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1 border-t border-stone-100">
+                          {tags.map((t) => (
+                            <span
+                              key={t}
+                              className="rounded-lg bg-amber-50 px-2 py-0.5 text-[10.5px] font-medium text-amber-900 border border-amber-200/60"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {comment && (
+                        <p className="text-[11.5px] text-stone-600 bg-stone-50 rounded-xl p-2 italic border border-stone-200">
+                          "{comment}"
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-xs py-2.5 shadow-sm transition active:scale-95"
+                  >
+                    <ExternalLink size={14} />
+                    <span>Post Review on Google Maps</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackOpen(true)}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-bold text-xs py-2.5 px-4 shadow-xs transition"
+                  >
+                    <span>Visit Channels</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Interactive Dish Rating Form */
+              <div className="space-y-3.5 pt-1">
+                {order.lines.map((l) => {
+                  const curRating = itemRatings[l.lineId]?.rating ?? 5;
+                  const curComment = itemRatings[l.lineId]?.comment ?? '';
+                  const curTags = itemRatings[l.lineId]?.tags ?? [];
+
+                  return (
+                    <div
+                      key={l.lineId}
+                      className="rounded-2xl border border-stone-200/90 bg-white p-3.5 shadow-sm space-y-3"
+                    >
+                      {/* Item Info & Stars */}
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={l.image}
+                          alt={l.name}
+                          className="h-14 w-14 rounded-xl object-cover border border-stone-200 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13.5px] font-bold text-stone-900 leading-tight">
+                            {l.qty} × {l.name}
+                          </p>
+                          <p className="text-[11px] text-stone-500 mt-0.5">
+                            Tap stars to rate this dish:
+                          </p>
+
+                          {/* 5-Star Interactive Selector */}
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => handleItemRatingChange(l.lineId, star)}
+                                className="p-0.5 transition hover:scale-125 active:scale-95 focus:outline-none"
+                                title={`${star} Star`}
+                              >
+                                <Star
+                                  size={22}
+                                  className={`${
+                                    star <= curRating
+                                      ? 'fill-amber-500 text-amber-500 drop-shadow-xs'
+                                      : 'text-stone-300 hover:text-amber-300'
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                            <span className="ml-1.5 text-xs font-black text-amber-800">
+                              {curRating === 5
+                                ? '5★ Loved it!'
+                                : curRating === 4
+                                  ? '4★ Very good'
+                                  : curRating === 3
+                                    ? '3★ Average'
+                                    : `${curRating}★`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Sentiment Tags */}
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+                          Quick tags:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {QUICK_REVIEW_TAGS.map((tag) => {
+                            const active = curTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => handleTagToggle(l.lineId, tag)}
+                                className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                                  active
+                                    ? 'bg-amber-500 text-stone-950 shadow-xs font-bold'
+                                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200/80 border border-stone-200/60'
+                                }`}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Optional Note */}
+                      <div>
+                        <input
+                          type="text"
+                          value={curComment}
+                          onChange={(e) => handleCommentChange(l.lineId, e.target.value)}
+                          placeholder="Short comment (e.g. Perfectly cooked, loved the dip)..."
+                          className="w-full rounded-xl border border-stone-200 bg-stone-50/70 px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Submit Ratings Button */}
+                <div className="pt-1 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSubmitItemReviews}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#18392B] hover:bg-[#122A20] text-white py-3 text-xs font-bold shadow-md shadow-stone-900/10 transition active:scale-[0.98]"
+                  >
+                    <Star size={15} className="fill-amber-400 text-amber-400" />
+                    <span>Submit Dish Ratings ({order.lines.length} Items)</span>
+                  </button>
+
+                  {isEditingReview && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingReview(false)}
+                      className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </section>
       )}
 
       <Sheet open={callOpen} onClose={() => setCallOpen(false)} title="Call our staff">

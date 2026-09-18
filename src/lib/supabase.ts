@@ -122,6 +122,7 @@ export function mapOrderFromDb(row: any): Order {
     updatedAt: Number(row.updated_at),
     timeline: Array.isArray(row.timeline) ? row.timeline : [],
     paymentMode: row.payment_mode || 'COUNTER',
+    reviewedAt: (Array.isArray(row.lines) && row.lines.find((l: any) => l.reviewedAt)?.reviewedAt) || undefined,
   };
 }
 

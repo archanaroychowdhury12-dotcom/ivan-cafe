@@ -60,6 +60,33 @@ export interface CartLine {
   qty: number;
   addons: { groupName: string; optionName: string; price: number }[];
   note?: string;
+  rating?: number; // 1 to 5 stars
+  reviewComment?: string;
+  reviewTags?: string[];
+  reviewedAt?: number;
+}
+
+export interface ItemReview {
+  orderId: string;
+  orderCode: string;
+  tableCode: string;
+  customerName: string;
+  itemId: string;
+  itemName: string;
+  itemImage: string;
+  rating: number; // 1 - 5
+  comment?: string;
+  tags?: string[];
+  createdAt: number;
+}
+
+export interface ItemRatingStats {
+  itemId: string;
+  averageRating: number;
+  totalReviews: number;
+  starCounts: { 1: number; 2: number; 3: number; 4: number; 5: number };
+  recentReviews: ItemReview[];
+  satisfactionPercent: number;
 }
 
 export interface TimelineEntry {
@@ -88,6 +115,8 @@ export interface Order {
   updatedAt: number;
   timeline: TimelineEntry[];
   paymentMode: 'COUNTER' | 'UPI' | 'CARD';
+  reviewedAt?: number;
+  customerReview?: string;
 }
 
 export type CallReason = 'Assistance' | 'Water refill' | 'Cutlery' | 'Request bill' | 'Cleaning';

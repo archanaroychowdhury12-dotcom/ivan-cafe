@@ -7,6 +7,7 @@ import {
   Search,
   Tag,
   Trash2,
+  Upload,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
@@ -189,12 +190,56 @@ export default function MenuPanel() {
 
 /* ------------------------------- item editor ------------------------------ */
 
+/**
+ * Resizes and compresses user-uploaded images from gallery/files
+ * into a lightweight base64 data URL (< 60KB) for instant loading.
+ */
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 750;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => resolve(e.target?.result as string);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function ItemEditor({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
   const categories = useCategories();
   const toast = useToast();
   const [draft, setDraft] = useState<MenuItem | null>(item);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [prevId, setPrevId] = useState(item?.id);
+  const [uploading, setUploading] = useState(false);
 
   if (item?.id !== prevId) {
     setPrevId(item?.id);
@@ -204,6 +249,27 @@ function ItemEditor({ item, onClose }: { item: MenuItem | null; onClose: () => v
   if (!draft) return <Sheet open={false} onClose={onClose} children={null} />;
 
   const set = <K extends keyof MenuItem>(k: K, v: MenuItem[K]) => setDraft({ ...draft, [k]: v });
+
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast('Please choose a valid photo (JPG, PNG, WebP)', 'error');
+      return;
+    }
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      set('image', compressed);
+      toast('Photo loaded from gallery! Click Save to apply.', 'success');
+    } catch (err) {
+      console.error(err);
+      toast('Failed to load image from device', 'error');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const save = () => {
     const e: Record<string, string> = {};
@@ -238,31 +304,85 @@ function ItemEditor({ item, onClose }: { item: MenuItem | null; onClose: () => v
   return (
     <Sheet open={!!item} onClose={onClose} title={item?.name ? 'Edit item' : 'New menu item'} size="lg">
       <div className="max-h-[72vh] space-y-4 overflow-y-auto px-5 py-5">
-        <div className="flex gap-4">
-          <img
-            src={draft.image}
-            alt=""
-            className="h-24 w-24 shrink-0 rounded-2xl border border-line object-cover"
-          />
-          <div className="flex-1 space-y-2">
-            <Field label="Image URL" hint="or pick a preset">
-              <input className={inputCx} value={draft.image} onChange={(e) => set('image', e.target.value)} />
+        <div className="flex flex-col sm:flex-row gap-4 items-start rounded-2xl border border-line bg-cream/40 p-4">
+          <div className="relative group shrink-0">
+            <img
+              src={draft.image}
+              alt=""
+              className="h-28 w-28 rounded-2xl border border-line object-cover shadow-sm bg-white"
+            />
+            <label
+              className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-black/60 text-white opacity-0 group-hover:opacity-100 transition cursor-pointer"
+              title="Click to upload from gallery"
+            >
+              <Upload size={22} />
+              <span className="text-[11px] font-bold mt-1">Change</span>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                className="hidden"
+                onChange={handleImageFile}
+              />
+            </label>
+          </div>
+
+          <div className="flex-1 w-full space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[12px] font-bold text-ink uppercase tracking-wider">Item Image</span>
+              <label
+                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 px-3 py-1.5 text-xs font-bold transition active:scale-95 cursor-pointer shadow-xs"
+              >
+                <Upload size={14} />
+                <span>{uploading ? 'Processing photo...' : '📁 Upload from Gallery / Files'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  className="hidden"
+                  onChange={handleImageFile}
+                />
+              </label>
+            </div>
+
+            <Field label="Image URL or Path">
+              <input
+                className={inputCx}
+                value={draft.image.startsWith('data:') ? 'Custom uploaded image (from your gallery/files)' : draft.image}
+                onChange={(e) => set('image', e.target.value)}
+                placeholder="https://... or upload photo from device"
+              />
             </Field>
-            <div className="flex flex-wrap gap-1.5">
-              {IMAGE_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => set('image', p)}
-                  className={`h-10 w-10 overflow-hidden rounded-lg border-2 transition ${
-                    draft.image === p ? 'border-ember' : 'border-transparent opacity-70 hover:opacity-100'
-                  }`}
+
+            <div>
+              <p className="text-[11px] text-mocha mb-1 font-medium">Or choose from preset cafe photos:</p>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {IMAGE_PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => set('image', p)}
+                    className={`h-10 w-10 overflow-hidden rounded-lg border-2 transition cursor-pointer ${
+                      draft.image === p ? 'border-ember scale-105 shadow-sm' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={p} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+                <label
+                  className="grid h-10 w-10 place-items-center rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/10 text-amber-900 hover:bg-amber-500/20 cursor-pointer transition shadow-xs"
+                  title="Upload from device gallery or files"
                 >
-                  <img src={p} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-              <span className="grid h-10 w-10 place-items-center rounded-lg border border-dashed border-line text-mocha">
-                <ImagePlus size={15} />
-              </span>
+                  <Upload size={16} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploading}
+                    className="hidden"
+                    onChange={handleImageFile}
+                  />
+                </label>
+              </div>
             </div>
           </div>
         </div>

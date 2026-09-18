@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Heart, Minus, Plus, Settings2, ShoppingCart, Star } from 'lucide-react';
-import type { MenuItem } from '../../lib/types';
+import type { MenuItem, ItemRatingStats } from '../../lib/types';
 import { money } from '../../lib/format';
 
 export function ItemCard({
@@ -12,6 +12,7 @@ export function ItemCard({
   inCart,
   index = 0,
   layout = 'grid',
+  ratingStats,
 }: {
   item: MenuItem;
   onOpen: () => void;
@@ -20,6 +21,7 @@ export function ItemCard({
   inCart: number;
   index?: number;
   layout?: 'grid' | 'list';
+  ratingStats?: ItemRatingStats;
 }) {
   const [qty, setQty] = useState(1);
   const [liked, setLiked] = useState(false);

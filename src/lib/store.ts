@@ -620,6 +620,46 @@ export const actions = {
     }
   },
 
+  async submitOrderReview(
+    orderId: string,
+    reviews: Record<string, { rating: number; comment?: string; tags?: string[] }>,
+    overallComment?: string,
+  ) {
+    let updatedOrder: Order | undefined;
+    const now = Date.now();
+    mutate((d) => {
+      const o = d.orders.find((x) => x.id === orderId || x.code === orderId);
+      if (!o) return;
+      o.reviewedAt = now;
+      if (overallComment) {
+        o.customerReview = overallComment;
+      }
+      o.lines.forEach((line) => {
+        const rev = reviews[line.lineId] || reviews[line.itemId];
+        if (rev && rev.rating > 0) {
+          line.rating = rev.rating;
+          line.reviewComment = rev.comment || undefined;
+          line.reviewTags = rev.tags || undefined;
+          line.reviewedAt = now;
+        }
+      });
+      o.updatedAt = now;
+      updatedOrder = o;
+    });
+
+    if (supabase && updatedOrder) {
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .update(mapOrderToDb(updatedOrder))
+          .eq('id', updatedOrder.id);
+        if (error) console.error('Supabase submitOrderReview error:', error);
+      } catch (err) {
+        console.error('Failed to submit order review to Supabase:', err);
+      }
+    }
+  },
+
   callStaff(tableCode: string, reason: CallReason, note?: string) {
     try {
       playStaffCallAlert(tableCode);
