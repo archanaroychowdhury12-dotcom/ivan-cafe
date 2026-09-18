@@ -116,6 +116,40 @@ export interface Settings {
   adminPassHash: string;
   adminPass?: string;
   customDomain?: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  webhookEnabled?: boolean;
+  autoPrintOrders?: boolean;
+}
+
+export interface OrderAuditLog {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  action: string;
+  oldStatus?: string;
+  newStatus?: string;
+  actor: string;
+  note?: string;
+  changes?: Record<string, any>;
+  snapshot?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface WebhookEvent {
+  id: string;
+  eventType: string;
+  aggregateId: string;
+  payload: Record<string, any>;
+  status: 'pending' | 'processing' | 'delivered' | 'failed';
+  attempts: number;
+  maxAttempts: number;
+  nextRetryAt: string;
+  lastError?: string;
+  responseStatus?: number;
+  responseBody?: string;
+  deliveredAt?: string;
+  createdAt: string;
 }
 
 export interface DB {

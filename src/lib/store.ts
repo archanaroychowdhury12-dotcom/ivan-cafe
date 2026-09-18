@@ -27,6 +27,7 @@ import {
   mapSettingsToDb,
   mapTableFromDb,
   mapTableToDb,
+  cancelOrderServer,
   supabase,
 } from './supabase';
 import { playStaffCallAlert } from './sound';
@@ -581,25 +582,41 @@ export const actions = {
     return order;
   },
 
-  setOrderStatus(id: string, status: OrderStatus, by = 'Staff') {
+  async setOrderStatus(id: string, status: OrderStatus, by = 'Staff', note?: string) {
     let updatedOrder: Order | undefined;
     mutate((d) => {
       const o = d.orders.find((x) => x.id === id);
       if (!o) return;
       o.status = status;
       o.updatedAt = Date.now();
-      o.timeline.push({ status, at: Date.now(), by });
+      if (note) {
+        o.note = o.note ? `${o.note} [${note}]` : `[${note}]`;
+      }
+      o.timeline.push({ status, at: Date.now(), by: note ? `${by} (${note})` : by });
       updatedOrder = o;
     });
 
     if (supabase && updatedOrder) {
-      supabase
-        .from('orders')
-        .update(mapOrderToDb(updatedOrder))
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) console.error('Supabase setOrderStatus error:', error);
-        });
+      if (status === 'CANCELLED') {
+        const res = await cancelOrderServer(id, note || by, by);
+        if (!res.success) {
+          supabase
+            .from('orders')
+            .update(mapOrderToDb(updatedOrder))
+            .eq('id', id)
+            .then(({ error }) => {
+              if (error) console.error('Supabase setOrderStatus fallback error:', error);
+            });
+        }
+      } else {
+        supabase
+          .from('orders')
+          .update(mapOrderToDb(updatedOrder))
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.error('Supabase setOrderStatus error:', error);
+          });
+      }
     }
   },
 

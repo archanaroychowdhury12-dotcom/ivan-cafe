@@ -192,6 +192,10 @@ export function mapSettingsFromDb(row: any, fallback: Settings): Settings {
     adminPassHash: row.admin_pass_hash || fallback.adminPassHash,
     adminPass: (typeof localStorage !== 'undefined' && localStorage.getItem('ivan_admin_pass')) || fallback.adminPass || 'ivan2026',
     customDomain: row.custom_domain || fallback.customDomain,
+    webhookUrl: row.webhook_url || '',
+    webhookSecret: row.webhook_secret || '',
+    webhookEnabled: Boolean(row.webhook_enabled),
+    autoPrintOrders: Boolean(row.auto_print_orders),
   };
 }
 
@@ -211,5 +215,131 @@ export function mapSettingsToDb(s: Settings) {
     admin_user: s.adminUser,
     admin_pass_hash: s.adminPassHash,
     custom_domain: s.customDomain || null,
+    webhook_url: s.webhookUrl || '',
+    webhook_secret: s.webhookSecret || '',
+    webhook_enabled: Boolean(s.webhookEnabled),
+    auto_print_orders: Boolean(s.autoPrintOrders),
   };
+}
+
+export function mapAuditLogFromDb(row: any) {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    orderCode: row.order_code,
+    action: row.action,
+    oldStatus: row.old_status || undefined,
+    newStatus: row.new_status || undefined,
+    actor: row.actor || 'system',
+    note: row.note || undefined,
+    changes: row.changes || {},
+    snapshot: row.snapshot || {},
+    createdAt: row.created_at,
+  };
+}
+
+export function mapWebhookEventFromDb(row: any) {
+  return {
+    id: row.id,
+    eventType: row.event_type,
+    aggregateId: row.aggregate_id,
+    payload: row.payload || {},
+    status: row.status,
+    attempts: Number(row.attempts || 0),
+    maxAttempts: Number(row.max_attempts || 5),
+    nextRetryAt: row.next_retry_at,
+    lastError: row.last_error || undefined,
+    responseStatus: row.response_status != null ? Number(row.response_status) : undefined,
+    responseBody: row.response_body || undefined,
+    deliveredAt: row.delivered_at || undefined,
+    createdAt: row.created_at,
+  };
+}
+
+/* --------------------------- server-side RPC & helpers --------------------------- */
+
+export async function cancelOrderServer(
+  orderIdOrCode: string,
+  reason: string = 'Customer requested cancellation',
+  by: string = 'customer'
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  if (!supabase) {
+    return { success: false, error: 'Database client not initialized' };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('cancel_order', {
+      p_order_id: orderIdOrCode,
+      p_reason: reason,
+      p_by: by,
+    });
+
+    if (error) {
+      console.warn('RPC cancel_order error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return (data as { success: boolean; error?: string; message?: string }) || { success: true };
+  } catch (err: any) {
+    console.error('cancelOrderServer invocation failed:', err);
+    return { success: false, error: err.message || 'Invocation failed' };
+  }
+}
+
+export async function retryWebhooksServer(): Promise<{ success: boolean; resetCount: number; error?: string }> {
+  if (!supabase) {
+    return { success: false, resetCount: 0, error: 'Database client not initialized' };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('retry_failed_webhooks');
+    if (error) throw error;
+    return { success: true, resetCount: Number(data || 0) };
+  } catch (err: any) {
+    console.error('retryWebhooksServer failed:', err);
+    return { success: false, resetCount: 0, error: err.message };
+  }
+}
+
+export async function fetchOrderAuditLogs(orderId?: string) {
+  if (!supabase) return [];
+  try {
+    let query = supabase
+      .from('order_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (orderId) {
+      query = query.or(`order_id.eq.${orderId},order_code.eq.${orderId}`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('Error fetching audit logs:', error);
+      return [];
+    }
+    return (data || []).map(mapAuditLogFromDb);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchWebhookEvents(limit: number = 30) {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('webhook_events')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.warn('Error fetching webhook events:', error);
+      return [];
+    }
+    return (data || []).map(mapWebhookEventFromDb);
+  } catch {
+    return [];
+  }
 }
