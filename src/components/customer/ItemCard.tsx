@@ -11,6 +11,7 @@ export function ItemCard({
   onDirectRemove,
   inCart,
   index = 0,
+  layout = 'grid',
 }: {
   item: MenuItem;
   onOpen: () => void;
@@ -18,6 +19,7 @@ export function ItemCard({
   onDirectRemove?: () => void;
   inCart: number;
   index?: number;
+  layout?: 'grid' | 'list';
 }) {
   const [qty, setQty] = useState(1);
   const [liked, setLiked] = useState(false);
@@ -65,6 +67,147 @@ export function ItemCard({
     );
 
   const isNew = item.tags.some((t) => t.toLowerCase().includes('new') || t.toLowerCase().includes('large'));
+
+  if (layout === 'grid') {
+    return (
+      <motion.article
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-20px' }}
+        transition={{ duration: 0.35, delay: Math.min(index * 0.02, 0.2), ease: [0.22, 1, 0.36, 1] }}
+        onClick={() => !item.soldOut && onOpen()}
+        className={`group relative flex flex-col justify-between overflow-hidden rounded-[22px] border border-[#E9DAC8]/90 bg-[#FFFDF9] shadow-[0_2px_10px_rgba(0,0,0,0.04)] transition-all duration-300 ${
+          item.soldOut
+            ? 'opacity-70'
+            : 'cursor-pointer hover:border-amber-600/40 hover:shadow-[0_6px_20px_rgba(0,0,0,0.08)] active:scale-[0.98]'
+        }`}
+      >
+        {/* TOP: Image Container */}
+        <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#F6EFE6] border-b border-[#E9DAC8]/60">
+          <img
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-108"
+          />
+
+          {/* Badges on Top-Left */}
+          {item.soldOut ? (
+            <span className="absolute left-1.5 top-1.5 rounded-full bg-stone-900/90 px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-wider text-white shadow-xs">
+              Sold Out
+            </span>
+          ) : isPopular ? (
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#E5A93C] px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
+              <Star size={8} className="fill-white text-white" /> POPULAR
+            </span>
+          ) : isNew ? (
+            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#0D9488] px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
+              NEW
+            </span>
+          ) : null}
+
+          {/* Heart Favorite on Top-Right */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLiked(!liked);
+            }}
+            className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/30 backdrop-blur-xs text-white hover:text-rose-400 transition-colors active:scale-90"
+            aria-label="Add to favorites"
+          >
+            <Heart
+              size={13}
+              className={liked ? 'fill-rose-500 text-rose-500' : 'text-white'}
+            />
+          </button>
+
+          {/* Bottom badge: Veg / Prep time */}
+          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-md bg-black/40 backdrop-blur-xs px-1.5 py-0.5 text-[9px] text-white font-medium">
+            <span className={`inline-block h-2 w-2 rounded-full ${item.veg ? 'bg-emerald-400' : 'bg-red-400'}`} />
+            <span>{item.prepMins}m</span>
+          </div>
+
+          {item.soldOut && (
+            <div className="absolute inset-0 grid place-items-center bg-stone-950/65 text-center backdrop-blur-[1px]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white">
+                Unavailable
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* BOTTOM: Content */}
+        <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
+          <div>
+            <h3 className="font-editorial text-[14px] sm:text-[15px] font-bold leading-tight text-stone-900 group-hover:text-amber-900 transition-colors line-clamp-1">
+              {item.name}
+            </h3>
+
+            <p className="mt-1 line-clamp-2 text-[10.5px] sm:text-[11px] leading-snug text-stone-500">
+              {item.description}
+            </p>
+
+            {item.addonGroups.length > 0 && (
+              <p className="mt-1 text-[10px] font-semibold text-[#D97706] flex items-center gap-0.5">
+                <Settings2 size={10} /> Customise
+              </p>
+            )}
+          </div>
+
+          {/* Price and Action Row */}
+          <div className="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between gap-1">
+            <span className="font-display text-[15px] sm:text-[16px] font-black text-stone-900 leading-none">
+              {money(item.price)}
+            </span>
+
+            {/* Stepper or ADD button */}
+            {!item.soldOut ? (
+              inCart > 0 ? (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 rounded-full bg-[#18392B] text-white px-1.5 py-0.5 shadow-xs"
+                >
+                  <button
+                    type="button"
+                    onClick={handleMinusClick}
+                    className="grid h-5 w-5 place-items-center rounded-full hover:bg-white/20 active:scale-90 text-white font-bold transition"
+                    aria-label="Decrease"
+                  >
+                    <Minus size={10} strokeWidth={2.5} />
+                  </button>
+                  <span className="min-w-[12px] text-center font-display text-[11px] font-bold text-white">
+                    {inCart}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handlePlusClick}
+                    className="grid h-5 w-5 place-items-center rounded-full hover:bg-white/20 active:scale-90 text-white font-bold transition"
+                    aria-label="Increase"
+                  >
+                    <Plus size={10} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAddClick}
+                  className="flex items-center gap-1 rounded-full bg-[#18392B] hover:bg-[#122A20] text-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider shadow-xs transition active:scale-95"
+                >
+                  <Plus size={11} strokeWidth={3} />
+                  <span>ADD</span>
+                </button>
+              )
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                Sold Out
+              </span>
+            )}
+          </div>
+        </div>
+      </motion.article>
+    );
+  }
 
   return (
     <motion.article

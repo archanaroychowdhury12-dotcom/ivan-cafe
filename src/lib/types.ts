@@ -114,6 +114,7 @@ export interface Settings {
   hours: string;
   adminUser: string;
   adminPassHash: string;
+  adminPass?: string;
   customDomain?: string;
 }
 

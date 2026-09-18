@@ -188,6 +188,7 @@ export function seedDB(): DB {
       address: 'Ivan Caffe, Main Road',
       hours: '09:00 — 23:00 · Every day',
       adminUser: 'admin',
+      adminPass: 'ivan2026',
       adminPassHash: DEFAULT_PASS_HASH,
       customDomain: 'https://ivan-caffe.vercel.app',
     },

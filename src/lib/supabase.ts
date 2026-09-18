@@ -190,6 +190,7 @@ export function mapSettingsFromDb(row: any, fallback: Settings): Settings {
     hours: row.hours || fallback.hours,
     adminUser: row.admin_user || fallback.adminUser,
     adminPassHash: row.admin_pass_hash || fallback.adminPassHash,
+    adminPass: (typeof localStorage !== 'undefined' && localStorage.getItem('ivan_admin_pass')) || fallback.adminPass || 'ivan2026',
     customDomain: row.custom_domain || fallback.customDomain,
   };
 }

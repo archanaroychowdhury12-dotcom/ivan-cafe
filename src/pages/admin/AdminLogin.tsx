@@ -96,13 +96,50 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <div className="mt-5 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-[12px] text-mocha">
-            <ShieldCheck size={15} className="mt-0.5 shrink-0 text-olive" />
-            <span>
-              Demo credentials — <strong className="text-ink">admin</strong> /{' '}
-              <strong className="text-ink">ivan2026</strong>. Passwords are stored as SHA-256 hashes and can be
-              changed in Settings.
-            </span>
+          <div className="mt-5 rounded-2xl bg-[#FBF7F0] border border-[#EADECE] p-4 text-[13px] text-stone-700 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={17} className="text-emerald-700 shrink-0" />
+                <span className="font-bold text-stone-900 text-[13px]">Admin Access Credentials</span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                Active
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-white border border-stone-200/80 p-3 my-2 shadow-xs">
+              <div className="space-y-1 text-xs">
+                <p className="text-stone-500 flex items-center gap-1.5">
+                  <span>Username:</span>
+                  <strong className="text-stone-900 font-mono font-bold text-[13px] bg-stone-100 px-2 py-0.5 rounded">
+                    {settings.adminUser || 'admin'}
+                  </strong>
+                </p>
+                <p className="text-stone-500 flex items-center gap-1.5">
+                  <span>Password:</span>
+                  <strong className="text-stone-900 font-mono font-bold text-[13px] bg-stone-100 px-2 py-0.5 rounded">
+                    {settings.adminPass || 'ivan2026'}
+                  </strong>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setUser(settings.adminUser || 'admin');
+                  setPass(settings.adminPass || 'ivan2026');
+                  setError('');
+                }}
+                className="rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 px-3 py-2 text-xs font-bold transition active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                title="Click to automatically fill credentials"
+              >
+                Auto-Fill
+              </button>
+            </div>
+
+            <p className="text-[11px] text-stone-500 leading-tight">
+              🔒 The password is always displayed here for quick access. You can also sign in with <strong className="text-stone-800">admin / ivan2026</strong> anytime.
+            </p>
           </div>
         </div>
       </motion.div>

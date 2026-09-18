@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Leaf,
   Menu as MenuIcon,
+  Rows3,
   Search,
   ShoppingBag,
   Soup,
@@ -162,6 +163,22 @@ export default function MenuPage() {
     }
     return 'Dine-in';
   });
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ivan-menu-view-mode');
+      if (saved === 'list' || saved === 'grid') return saved;
+    }
+    return 'grid';
+  });
+
+  const handleSetViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('ivan-menu-view-mode', mode);
+    } catch {}
+    blip();
+  };
 
   const switchDiningMode = (mode: 'Dine-in' | 'Takeaway') => {
     setDiningMode(mode);
@@ -593,6 +610,42 @@ export default function MenuPage() {
             </div>
           )}
 
+          {grouped.length > 0 && (
+            <div className="flex items-center justify-between pt-1 pb-1">
+              <span className="text-[11.5px] font-extrabold uppercase tracking-wider text-stone-500">
+                {filtered.length} Dishes
+              </span>
+              <div className="flex items-center rounded-2xl bg-[#EBE4D8] p-1 border border-[#DCD3C4] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('grid')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? 'bg-white text-stone-950 shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                  aria-label="Side by side view"
+                >
+                  <LayoutGrid size={13} strokeWidth={2.5} />
+                  <span>Side by Side</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('list')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-white text-stone-950 shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                  aria-label="List view"
+                >
+                  <Rows3 size={13} strokeWidth={2.5} />
+                  <span>List</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {grouped.map(({ cat, list }) => {
             const isSpecialSection = cat.id === 'c-chicken-snacks';
             return (
@@ -616,13 +669,14 @@ export default function MenuPage() {
                   </span>
                 </div>
 
-                {/* Items List */}
-                <div className="space-y-3">
+                {/* Items List / Grid */}
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2.5 sm:gap-3.5' : 'space-y-3'}>
                   {list.map((item, idx) => (
                     <ItemCard
                       key={item.id}
                       item={item}
                       index={idx}
+                      layout={viewMode}
                       inCart={qtyOf(item.id)}
                       onOpen={() => setSheetItem(item)}
                       onDirectAdd={(qty) => handleDirectAdd(item, qty)}
@@ -909,6 +963,32 @@ export default function MenuPage() {
                 </span>
               )}
             </button>
+
+            <a
+              href="https://maps.app.goo.gl/FWKo4hBFPVtqYvph9?g_st=ic"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-between rounded-xl bg-white border border-stone-200 p-3.5 font-bold text-stone-800 transition hover:bg-stone-50"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">⭐</span>
+                <span>Give Feedback on Google</span>
+              </div>
+              <ChevronRight size={16} className="text-stone-400" />
+            </a>
+
+            <a
+              href="https://www.facebook.com/share/1Dhjd93nm1/?mibextid=wwXIfr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-between rounded-xl bg-white border border-stone-200 p-3.5 font-bold text-stone-800 transition hover:bg-stone-50"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">📢</span>
+                <span>Visit Our Facebook Channel</span>
+              </div>
+              <ChevronRight size={16} className="text-stone-400" />
+            </a>
           </div>
 
           <div className="rounded-2xl border border-stone-200 bg-white p-4">
