@@ -17,7 +17,6 @@ import {
   Receipt,
   SearchX,
   Send,
-  Smartphone,
   Sparkles,
   Star,
   ThumbsUp,
@@ -25,12 +24,11 @@ import {
   XCircle,
 } from 'lucide-react';
 import { actions, useOrder, useSettings, useSyncStatus } from '../lib/store';
-import { clockTime, elapsed, money } from '../lib/format';
+import { clockTime, money } from '../lib/format';
 import { FLOW, type CallReason, type OrderStatus } from '../lib/types';
 import { STATUS_META } from '../components/status';
 import { Button, Chip, EmptyState, Sheet, useToast } from '../components/ui';
 import { Mark } from '../components/Brand';
-import { QRImage } from '../components/QRCode';
 import { mapOrderFromDb, supabase } from '../lib/supabase';
 
 const GOOGLE_MAPS_REVIEW_URL = 'https://maps.app.goo.gl/FWKo4hBFPVtqYvph9?g_st=ic';
@@ -64,7 +62,6 @@ export default function OrderStatusPage() {
   const [, tick] = useState(0);
   const [remoteLoading, setRemoteLoading] = useState(!order);
   const [callOpen, setCallOpen] = useState(false);
-  const [payModalOpen, setPayModalOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState(CANCEL_REASONS[0]);
   const [cancelNote, setCancelNote] = useState('');
@@ -266,7 +263,7 @@ export default function OrderStatusPage() {
                 {order.code} <Copy size={12} />
               </button>
               <span className="text-[11px] font-medium text-cream/60">
-                Placed {clockTime(order.createdAt)} · {elapsed(order.createdAt)} ago
+                Placed {clockTime(order.createdAt)}
               </span>
             </div>
 
@@ -415,14 +412,6 @@ export default function OrderStatusPage() {
 
                   <button
                     type="button"
-                    onClick={() => setPayModalOpen(true)}
-                    className="rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-bold text-stone-800 transition hover:bg-stone-50"
-                  >
-                    💳 Settle Bill / UPI
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => setFeedbackOpen(true)}
                     className="rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-100 flex items-center gap-1.5"
                     title="Give feedback & visit our channels"
@@ -525,11 +514,7 @@ export default function OrderStatusPage() {
             </div>
             <p className="flex items-center gap-1.5 pt-1 text-[11px] text-mocha">
               <Receipt size={11} />
-              {order.paymentMode === 'COUNTER'
-                ? 'Pay at the counter when you leave'
-                : order.paymentMode === 'UPI'
-                  ? 'UPI / wallet payment at the table'
-                  : 'Card payment at the table'}
+              Pay at the counter when you leave
             </p>
           </div>
         </div>
@@ -831,93 +816,6 @@ export default function OrderStatusPage() {
             className="shadow-md shadow-amber-500/20"
           >
             <BellRing size={18} className="animate-pulse" /> Call Staff (Table {order.tableCode})
-          </Button>
-        </div>
-      </Sheet>
-
-      {/* Settle Bill Modal */}
-      <Sheet open={payModalOpen} onClose={() => setPayModalOpen(false)} title="Settle Bill / UPI Payment">
-        <div className="space-y-4 px-5 py-4">
-          <div className="rounded-2xl bg-[#F4EFE6] p-4 text-center border border-[#EADECE]">
-            <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Total Bill</p>
-            <p className="font-display text-3xl font-bold text-stone-900 mt-0.5">{money(order.total)}</p>
-            <p className="text-[11px] text-stone-500 mt-1">Order #{order.code} · Table {order.tableCode}</p>
-          </div>
-
-          {/* QR Display Card */}
-          <div className="rounded-2xl border border-stone-200 bg-white p-4 text-center space-y-3 shadow-sm">
-            <div className="flex items-center justify-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5f259f] text-white text-[11px] font-bold">
-                पे
-              </span>
-              <p className="text-sm font-bold text-stone-900">PhonePe / UPI Scan & Pay</p>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="p-3 bg-white border-2 border-[#5f259f]/25 rounded-2xl shadow-sm inline-block">
-                <QRImage
-                  value={`upi://pay?pa=Q438109503@ybl&pn=Ivan%20Food%20Court&am=${order.total}&cu=INR&tn=Order%20${order.code}`}
-                  size={190}
-                />
-              </div>
-              <p className="mt-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                Pre-filled with exact bill amount {money(order.total)}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">UPI ID</p>
-              <div className="mt-1 flex items-center justify-center gap-2">
-                <code className="text-xs font-mono font-bold text-stone-800 bg-stone-100 px-3 py-1.5 rounded-lg border border-stone-200">
-                  Q438109503@ybl
-                </code>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard?.writeText('Q438109503@ybl');
-                    toast('UPI ID copied: Q438109503@ybl');
-                  }}
-                  className="rounded-lg border border-stone-200 p-1.5 hover:bg-stone-50 text-stone-600 active:scale-95"
-                  title="Copy UPI ID"
-                >
-                  <Copy size={14} />
-                </button>
-              </div>
-              <p className="mt-1.5 text-[11px] text-stone-400">Works with PhonePe · Google Pay · Paytm · BHIM</p>
-            </div>
-
-            {/* Direct Mobile UPI Link */}
-            <a
-              href={`upi://pay?pa=Q438109503@ybl&pn=Ivan%20Food%20Court&am=${order.total}&cu=INR&tn=Order%20${order.code}`}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#5f259f] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#4d1e82] active:scale-95"
-            >
-              <Smartphone size={14} /> Pay {money(order.total)} via UPI App
-            </a>
-          </div>
-
-          <div className="rounded-2xl border border-stone-200 bg-white p-3 flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-100 text-amber-800 text-base">
-              💵
-            </span>
-            <div className="text-left">
-              <p className="text-xs font-bold text-stone-900">Pay at Counter (Cash / Card)</p>
-              <p className="text-[11px] text-stone-500">You can also pay cash directly at the counter.</p>
-            </div>
-          </div>
-
-          <Button
-            full
-            size="lg"
-            onClick={() => {
-              setPayModalOpen(false);
-              toast('Thank you! Payment received confirmation will be verified by staff.', 'success');
-              // Automatically open the optional feedback popup after paying the bill
-              setTimeout(() => {
-                setFeedbackOpen(true);
-              }, 450);
-            }}
-          >
-            I Have Completed Payment
           </Button>
         </div>
       </Sheet>

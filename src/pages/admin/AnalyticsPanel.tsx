@@ -1,16 +1,21 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, IndianRupee, Receipt, TrendingUp, Trophy } from 'lucide-react';
-import { useOrders, useSettings } from '../../lib/store';
+import { BarChart3, IndianRupee, MessageSquare, Receipt, Sparkles, Star, TrendingUp, Trophy } from 'lucide-react';
+import { useItems, useOrders, useSettings } from '../../lib/store';
 import { clockTime, dayLabel, money } from '../../lib/format';
 import { StatusPill } from '../../components/status';
 import { Chip, EmptyState } from '../../components/ui';
+import { getTopLovedDishes, getAllCustomerReviews } from '../../lib/reviews';
 
 type Range = 'today' | '7d' | 'all';
 
 export default function AnalyticsPanel() {
+  const items = useItems();
   const orders = useOrders();
   const settings = useSettings();
   const [range, setRange] = useState<Range>('today');
+
+  const topLoved = useMemo(() => getTopLovedDishes(items, orders, 6), [items, orders]);
+  const recentDinerReviews = useMemo(() => getAllCustomerReviews(orders).slice(0, 6), [orders]);
 
   const filtered = useMemo(() => {
     const now = Date.now();
@@ -134,6 +139,146 @@ export default function AnalyticsPanel() {
                   </div>
                 ))}
               </div>
+            </section>
+          </div>
+
+          {/* Customer Ratings & Most Loved Dishes */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            {/* 1. Most Loved Dishes Leaderboard */}
+            <section className="rounded-[26px] border border-line bg-paper p-5 shadow-card space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/15 text-amber-600">
+                    <Star size={18} className="fill-amber-500 text-amber-500" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-[17px] font-semibold text-stone-900 leading-tight">
+                      Most Loved Dishes
+                    </h3>
+                    <p className="text-[11.5px] text-mocha">Ranked by diner ratings & satisfaction</p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold px-2.5 py-0.5 border border-amber-200">
+                  Diner Favorite
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {topLoved.map(({ item, stats }, i) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-2 rounded-2xl bg-cream/40 border border-line/60 hover:bg-cream/70 transition"
+                  >
+                    <span className={`grid h-7 w-7 place-items-center rounded-lg text-[12px] font-bold ${
+                      i === 0
+                        ? 'bg-amber-500 text-stone-950 font-black shadow-xs'
+                        : i === 1
+                          ? 'bg-stone-300 text-stone-800'
+                          : i === 2
+                            ? 'bg-amber-700 text-white'
+                            : 'bg-cream-deep text-mocha'
+                    }`}>
+                      {i + 1}
+                    </span>
+
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-11 w-11 rounded-xl object-cover border border-line shrink-0"
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13.5px] font-bold text-stone-900">{item.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] font-bold text-amber-800 flex items-center gap-0.5">
+                          <Star size={10} className="fill-amber-500 text-amber-500" />
+                          {stats.averageRating}
+                        </span>
+                        <span className="text-[10px] text-mocha">
+                          ({stats.totalReviews} reviews)
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
+                          {stats.satisfactionPercent}% Loved
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="font-display text-[14px] font-bold text-stone-800">
+                        {money(item.price, settings.currency)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* 2. Live Customer Feedback Feed */}
+            <section className="rounded-[26px] border border-line bg-paper p-5 shadow-card space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-500/15 text-blue-600">
+                    <MessageSquare size={17} />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-[17px] font-semibold text-stone-900 leading-tight">
+                      Recent Diner Feedback
+                    </h3>
+                    <p className="text-[11.5px] text-mocha">Live ratings from served customer orders</p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-blue-50 text-blue-800 text-[10px] font-bold px-2.5 py-0.5 border border-blue-200">
+                  Live Feed
+                </span>
+              </div>
+
+              {recentDinerReviews.length === 0 ? (
+                <div className="text-center py-8 text-xs text-mocha bg-stone-50 rounded-2xl border border-stone-200/60">
+                  Customer reviews submitted after meals are served will appear here live.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                  {recentDinerReviews.map((rev, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-2xl border border-line/70 bg-cream/30 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="rounded-md bg-stone-800 text-white text-[10px] font-bold px-1.5 py-0.5">
+                            {rev.tableCode}
+                          </span>
+                          <span className="text-[12.5px] font-bold text-stone-900 truncate">
+                            {rev.itemName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              size={11}
+                              className={
+                                s <= rev.rating ? 'fill-amber-500 text-amber-500' : 'text-stone-200'
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {rev.comment && (
+                        <p className="text-[11.5px] text-stone-600 italic bg-white/80 p-2 rounded-xl border border-stone-150">
+                          "{rev.comment}"
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] text-mocha">
+                        <span>By {rev.customerName}</span>
+                        <span>{dayLabel(rev.createdAt)} · {clockTime(rev.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
 

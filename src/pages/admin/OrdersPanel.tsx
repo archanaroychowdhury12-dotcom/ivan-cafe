@@ -11,7 +11,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { actions, useCalls, useOrders, useSettings } from '../../lib/store';
-import { clockTime, elapsed, money } from '../../lib/format';
+import { clockTime, money } from '../../lib/format';
 import { FLOW, type Order, type OrderStatus } from '../../lib/types';
 import { STATUS_META, StatusPill } from '../../components/status';
 import { Button, Chip, EmptyState, Sheet } from '../../components/ui';
@@ -201,7 +201,7 @@ function OrderCard({
               )}
             </div>
             <p className="text-[11px] font-medium text-mocha">
-              {order.customerName} · {clockTime(order.createdAt)} · {elapsed(order.createdAt)}
+              {order.customerName} · {clockTime(order.createdAt)}
             </p>
           </div>
         </div>
@@ -351,7 +351,6 @@ function OrderDetail({ order }: { order: Order }) {
           <span className="font-display text-[16px] font-semibold">Total</span>
           <span className="font-display text-[18px] font-semibold">{money(order.total)}</span>
         </div>
-        <p className="text-[11px] text-mocha">Payment: {order.paymentMode}</p>
       </div>
 
       <div className="mt-4">

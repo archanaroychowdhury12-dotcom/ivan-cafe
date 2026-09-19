@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -16,8 +16,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { actions, useCalls, useOrders, useSettings } from '../lib/store';
-import { clockTime, elapsed } from '../lib/format';
 import type { Order, OrderStatus } from '../lib/types';
+import { clockTime, elapsed } from '../lib/format';
 import { chime, formatTableSpeech, playStaffCallAlert } from '../lib/sound';
 import { Mark } from '../components/Brand';
 
@@ -81,15 +81,9 @@ export default function KitchenPage() {
   const [flash, setFlash] = useState<string | null>(null);
   const [callAlert, setCallAlert] = useState<{ tableCode: string; reason: string } | null>(null);
   const [cancelAlert, setCancelAlert] = useState<{ code: string; tableCode: string; by?: string } | null>(null);
-  const [, tick] = useState(0);
   const seen = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
   const seenCalls = useRef<Set<string>>(new Set(calls.map((c) => c.id)));
   const seenCancelled = useRef<Set<string>>(new Set(orders.filter((o) => o.status === 'CANCELLED').map((o) => o.id)));
-
-  useEffect(() => {
-    const i = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(i);
-  }, []);
 
   // Track incoming new orders
   useEffect(() => {
@@ -422,21 +416,6 @@ function Ticket({
   highlight: boolean;
   isLight: boolean;
 }) {
-  const mins = (Date.now() - order.createdAt) / 60000;
-
-  // Visual heat indicator based on elapsed waiting time
-  const heatClasses = isLight
-    ? mins > 15
-      ? 'border-rose-500 bg-rose-50/40 ring-2 ring-rose-400/40'
-      : mins > 8
-      ? 'border-amber-400 bg-amber-50/30 ring-1 ring-amber-300/60'
-      : 'border-stone-200/90 bg-white shadow-sm hover:shadow-md'
-    : mins > 15
-    ? 'border-berry'
-    : mins > 8
-    ? 'border-gold/70'
-    : 'border-cream/10';
-
   const next: { label: string; to: OrderStatus; icon: typeof Flame } =
     order.status === 'READY'
       ? { label: 'Mark Served', to: 'SERVED', icon: CheckCheck }
@@ -461,8 +440,10 @@ function Ticket({
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ type: 'spring', stiffness: 320, damping: 30 }}
       className={`rounded-[22px] border p-4 transition-all ${
-        isLight ? 'text-stone-900' : 'bg-espresso text-cream'
-      } ${heatClasses}`}
+        isLight
+          ? 'border-stone-200/90 bg-white shadow-sm hover:shadow-md text-stone-900'
+          : 'border-cream/10 bg-espresso text-cream'
+      }`}
     >
       {/* Ticket Header */}
       <div className="flex items-start justify-between">
@@ -493,32 +474,6 @@ function Ticket({
             }`}
           >
             #{order.code}
-          </p>
-        </div>
-
-        {/* Timer */}
-        <div className="text-right">
-          <p
-            className={`font-display text-[20px] font-black tabular-nums leading-none ${
-              mins > 15
-                ? 'text-rose-600 animate-pulse'
-                : mins > 8
-                ? isLight
-                  ? 'text-amber-700'
-                  : 'text-gold'
-                : isLight
-                ? 'text-stone-800'
-                : 'text-cream/80'
-            }`}
-          >
-            {elapsed(order.createdAt)}
-          </p>
-          <p
-            className={`text-[11px] font-semibold mt-0.5 ${
-              isLight ? 'text-stone-400' : 'text-cream/40'
-            }`}
-          >
-            {clockTime(order.createdAt)}
           </p>
         </div>
       </div>

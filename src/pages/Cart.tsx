@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
-  Banknote,
   Minus,
   NotebookPen,
   PackageCheck,
@@ -301,27 +300,6 @@ export default function CartPage() {
           </section>
 
           <section className="rounded-[24px] border border-line/80 bg-paper p-4 shadow-card">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-[16px] font-semibold">Payment Method</h3>
-              <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-0.5">
-                Pay After Meal
-              </span>
-            </div>
-
-            <div className="rounded-2xl bg-[#F4F9F4] border border-emerald-200/80 p-3.5 flex items-start gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800 font-bold">
-                <Banknote size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-emerald-950">Pay at Counter (After Meal)</p>
-                <p className="text-[12px] text-emerald-800 mt-0.5 leading-relaxed">
-                  Your order is sent straight to the kitchen and automatically confirmed. Settle in cash, UPI or card at the counter anytime during or after your meal.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[24px] border border-line/80 bg-paper p-4 shadow-card">
             <h3 className="mb-3 font-display text-[16px] font-semibold">Bill summary</h3>
             <dl className="space-y-2 text-[14px]">
               <Row label="Item total" value={money(totals.subtotal)} />
@@ -335,7 +313,7 @@ export default function CartPage() {
                 />
               )}
               <div className="!mt-3 border-t border-dashed border-line pt-3">
-                <Row label="Total to pay after meal" value={money(totals.total)} strong />
+                <Row label="Total" value={money(totals.total)} strong />
               </div>
             </dl>
           </section>
