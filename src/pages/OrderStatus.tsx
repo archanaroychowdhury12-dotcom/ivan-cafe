@@ -68,12 +68,18 @@ export default function OrderStatusPage() {
   const [billRequested, setBillRequested] = useState(false);
   const [reason, setReason] = useState<CallReason>('Assistance');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [ratingPromptDismissed, setRatingPromptDismissed] = useState(false);
   const [rating, setRating] = useState(5);
   const [itemRatings, setItemRatings] = useState<
     Record<string, { rating: number; comment: string; tags: string[] }>
   >({});
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [overallFeedback, setOverallFeedback] = useState('');
+
+  const handleCloseFeedback = () => {
+    setFeedbackOpen(false);
+    setRatingPromptDismissed(true);
+  };
 
   useEffect(() => {
     const i = setInterval(() => tick((n) => n + 1), 1000);
@@ -208,6 +214,16 @@ export default function OrderStatusPage() {
     order?.reviewedAt || order?.lines.some((l) => l.rating && l.rating > 0),
   );
 
+  // Auto-pop up rating sheet when order is marked SERVED
+  useEffect(() => {
+    if (order?.status === 'SERVED' && !isOrderReviewed && !ratingPromptDismissed) {
+      const timer = setTimeout(() => {
+        setFeedbackOpen(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [order?.status, isOrderReviewed, ratingPromptDismissed]);
+
   const handleSubmitItemReviews = async () => {
     if (!order) return;
     await actions.submitOrderReview(order.id, itemRatings, overallFeedback);
@@ -339,6 +355,22 @@ export default function OrderStatusPage() {
                   : `🔥 Direct to Kitchen • Chef is cooking your order now • Ready in ~${etaMins} mins`}
               </p>
             )}
+
+            {!isCancelled && order.status === 'SERVED' && (
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(true)}
+                className="mt-4 flex w-full items-center justify-between rounded-2xl bg-amber-500/20 border border-amber-400/40 px-4 py-2.5 text-[12px] font-bold text-amber-200 transition hover:bg-amber-500/30 active:scale-[0.98]"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Star size={15} className="fill-amber-400 text-amber-400" />
+                  {isOrderReviewed ? '✓ Dishes Rated · View Review' : '🍽️ Food Served! Tap to Rate Dishes'}
+                </span>
+                <span className="rounded-lg bg-amber-400 px-2 py-0.5 text-[11px] font-black text-stone-950">
+                  {isOrderReviewed ? 'View' : 'Rate ★'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -417,7 +449,7 @@ export default function OrderStatusPage() {
                     title="Give feedback & visit our channels"
                   >
                     <Star size={14} className="fill-amber-500 text-amber-500" />
-                    <span>Feedback &amp; Channels</span>
+                    <span>{isOrderReviewed ? 'Dish Ratings & Review' : 'Rate Food & Feedback'}</span>
                   </button>
                 </div>
               </div>
@@ -544,253 +576,16 @@ export default function OrderStatusPage() {
       )}
 
       {order.status === 'SERVED' && (
-        <section className="px-4 pt-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="rounded-[26px] border border-amber-500/30 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/30 p-4 sm:p-5 shadow-card space-y-4"
+        <div className="px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => setFeedbackOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-600 text-stone-950 py-3.5 text-xs font-black shadow-md shadow-amber-500/20 transition active:scale-[0.98]"
           >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500 text-stone-950 font-bold shadow-sm">
-                  <Star size={20} className="fill-stone-950" />
-                </div>
-                <div>
-                  <h3 className="font-display text-[16px] font-bold text-stone-900 leading-tight">
-                    {isOrderReviewed && !isEditingReview
-                      ? 'Your Dish Reviews & Feedback'
-                      : 'Rate The Dishes You Enjoyed'}
-                  </h3>
-                  <p className="text-[11px] font-medium text-stone-600">
-                    {isOrderReviewed && !isEditingReview
-                      ? 'Thank you! Your ratings help our chefs and other diners.'
-                      : 'How was the food? Rate each item served to your table.'}
-                  </p>
-                </div>
-              </div>
-              {isOrderReviewed && !isEditingReview && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingReview(true)}
-                  className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-800 shadow-xs hover:bg-stone-50 active:scale-95 transition"
-                >
-                  Edit Ratings
-                </button>
-              )}
-            </div>
-
-            {/* If already reviewed and not editing: show reviewed summary */}
-            {isOrderReviewed && !isEditingReview ? (
-              <div className="space-y-2.5 pt-1">
-                {order.lines.map((l) => {
-                  const r = l.rating || itemRatings[l.lineId]?.rating || 5;
-                  const comment = l.reviewComment || itemRatings[l.lineId]?.comment;
-                  const tags = l.reviewTags || itemRatings[l.lineId]?.tags || [];
-
-                  return (
-                    <div
-                      key={l.lineId}
-                      className="rounded-2xl border border-stone-200/80 bg-white p-3 shadow-xs space-y-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={l.image}
-                          alt={l.name}
-                          className="h-12 w-12 rounded-xl object-cover border border-stone-200"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-bold text-stone-900 truncate">
-                            {l.qty} × {l.name}
-                          </p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                size={14}
-                                className={
-                                  star <= r
-                                    ? 'fill-amber-500 text-amber-500'
-                                    : 'text-stone-200'
-                                }
-                              />
-                            ))}
-                            <span className="ml-1 text-[11px] font-bold text-amber-800">
-                              {r} / 5
-                            </span>
-                          </div>
-                        </div>
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                          Reviewed ✓
-                        </span>
-                      </div>
-
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1 border-t border-stone-100">
-                          {tags.map((t) => (
-                            <span
-                              key={t}
-                              className="rounded-lg bg-amber-50 px-2 py-0.5 text-[10.5px] font-medium text-amber-900 border border-amber-200/60"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {comment && (
-                        <p className="text-[11.5px] text-stone-600 bg-stone-50 rounded-xl p-2 italic border border-stone-200">
-                          "{comment}"
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-
-                <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFeedbackOpen(true)}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-xs py-2.5 shadow-sm transition active:scale-95"
-                  >
-                    <ExternalLink size={14} />
-                    <span>Post Review on Google Maps</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFeedbackOpen(true)}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-bold text-xs py-2.5 px-4 shadow-xs transition"
-                  >
-                    <span>Visit Channels</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Interactive Dish Rating Form */
-              <div className="space-y-3.5 pt-1">
-                {order.lines.map((l) => {
-                  const curRating = itemRatings[l.lineId]?.rating ?? 5;
-                  const curComment = itemRatings[l.lineId]?.comment ?? '';
-                  const curTags = itemRatings[l.lineId]?.tags ?? [];
-
-                  return (
-                    <div
-                      key={l.lineId}
-                      className="rounded-2xl border border-stone-200/90 bg-white p-3.5 shadow-sm space-y-3"
-                    >
-                      {/* Item Info & Stars */}
-                      <div className="flex items-start gap-3">
-                        <img
-                          src={l.image}
-                          alt={l.name}
-                          className="h-14 w-14 rounded-xl object-cover border border-stone-200 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13.5px] font-bold text-stone-900 leading-tight">
-                            {l.qty} × {l.name}
-                          </p>
-                          <p className="text-[11px] text-stone-500 mt-0.5">
-                            Tap stars to rate this dish:
-                          </p>
-
-                          {/* 5-Star Interactive Selector */}
-                          <div className="flex items-center gap-1.5 mt-1.5">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                key={star}
-                                type="button"
-                                onClick={() => handleItemRatingChange(l.lineId, star)}
-                                className="p-0.5 transition hover:scale-125 active:scale-95 focus:outline-none"
-                                title={`${star} Star`}
-                              >
-                                <Star
-                                  size={22}
-                                  className={`${
-                                    star <= curRating
-                                      ? 'fill-amber-500 text-amber-500 drop-shadow-xs'
-                                      : 'text-stone-300 hover:text-amber-300'
-                                  }`}
-                                />
-                              </button>
-                            ))}
-                            <span className="ml-1.5 text-xs font-black text-amber-800">
-                              {curRating === 5
-                                ? '5★ Loved it!'
-                                : curRating === 4
-                                  ? '4★ Very good'
-                                  : curRating === 3
-                                    ? '3★ Average'
-                                    : `${curRating}★`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Quick Sentiment Tags */}
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
-                          Quick tags:
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {QUICK_REVIEW_TAGS.map((tag) => {
-                            const active = curTags.includes(tag);
-                            return (
-                              <button
-                                key={tag}
-                                type="button"
-                                onClick={() => handleTagToggle(l.lineId, tag)}
-                                className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
-                                  active
-                                    ? 'bg-amber-500 text-stone-950 shadow-xs font-bold'
-                                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200/80 border border-stone-200/60'
-                                }`}
-                              >
-                                {tag}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Optional Note */}
-                      <div>
-                        <input
-                          type="text"
-                          value={curComment}
-                          onChange={(e) => handleCommentChange(l.lineId, e.target.value)}
-                          placeholder="Short comment (e.g. Perfectly cooked, loved the dip)..."
-                          className="w-full rounded-xl border border-stone-200 bg-stone-50/70 px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Submit Ratings Button */}
-                <div className="pt-1 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSubmitItemReviews}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#18392B] hover:bg-[#122A20] text-white py-3 text-xs font-bold shadow-md shadow-stone-900/10 transition active:scale-[0.98]"
-                  >
-                    <Star size={15} className="fill-amber-400 text-amber-400" />
-                    <span>Submit Dish Ratings ({order.lines.length} Items)</span>
-                  </button>
-
-                  {isEditingReview && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingReview(false)}
-                      className="rounded-2xl border border-stone-300 bg-white px-4 py-3 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </section>
+            <Star size={16} className="fill-stone-950 text-stone-950" />
+            <span>{isOrderReviewed ? 'View / Edit Dish Ratings' : '⭐ Rate The Dishes You Enjoyed'}</span>
+          </button>
+        </div>
       )}
 
       <Sheet open={callOpen} onClose={() => setCallOpen(false)} title="Call our staff">
@@ -895,169 +690,323 @@ export default function OrderStatusPage() {
         </div>
       </Sheet>
 
-      {/* Optional Feedback & Community Channel Modal */}
-      <Sheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} title="Feedback & Visit Channels">
-        <div className="space-y-4 px-5 py-4">
+      {/* Dish Rating & Review Modal (Popup) */}
+      <Sheet
+        open={feedbackOpen}
+        onClose={handleCloseFeedback}
+        title={isOrderReviewed && !isEditingReview ? 'Dish Ratings & Review' : 'Rate The Dishes You Enjoyed'}
+      >
+        <div className="max-h-[82vh] overflow-y-auto px-4 py-4 space-y-4">
           {/* Header Banner */}
-          <div className="text-center rounded-2xl bg-gradient-to-br from-amber-500/15 via-gold/10 to-amber-500/5 p-4 border border-amber-500/20">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-amber-500/20 text-amber-600 mb-2">
-              <Sparkles size={24} />
+          <div className="rounded-2xl bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-500/5 p-4 border border-amber-500/25 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-500 text-stone-950 font-bold shadow-xs">
+                <Star size={20} className="fill-stone-950" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-display text-[15px] font-bold text-stone-900 leading-tight">
+                  {isOrderReviewed && !isEditingReview
+                    ? 'Your Dish Reviews & Feedback'
+                    : 'Rate The Dishes You Enjoyed'}
+                </h4>
+                <p className="text-[11px] text-stone-600 truncate">
+                  {isOrderReviewed && !isEditingReview
+                    ? 'Thank you! Your ratings help our chefs and diners.'
+                    : `How was your food at Table ${order.tableCode}?`}
+                </p>
+              </div>
             </div>
-            <h3 className="font-display text-lg font-bold text-stone-900">How was your experience?</h3>
-            <p className="text-xs text-stone-600 mt-1 max-w-xs mx-auto">
-              Your feedback is optional, but helps us serve you better at {settings.cafeName}!
-            </p>
+            {isOrderReviewed && !isEditingReview && (
+              <button
+                type="button"
+                onClick={() => setIsEditingReview(true)}
+                className="shrink-0 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-[11px] font-bold text-stone-800 shadow-xs hover:bg-stone-50 active:scale-95 transition"
+              >
+                Edit Ratings
+              </button>
+            )}
+          </div>
 
-            {/* Star Rating */}
-            <div className="mt-3 flex items-center justify-center gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className="text-3xl transition hover:scale-125 active:scale-95 focus:outline-none"
-                  title={`${star} Star`}
+          {/* If already reviewed and not editing: show reviewed summary */}
+          {isOrderReviewed && !isEditingReview ? (
+            <div className="space-y-3">
+              {order.lines.map((l) => {
+                const r = l.rating || itemRatings[l.lineId]?.rating || 5;
+                const comment = l.reviewComment || itemRatings[l.lineId]?.comment;
+                const tags = l.reviewTags || itemRatings[l.lineId]?.tags || [];
+
+                return (
+                  <div
+                    key={l.lineId}
+                    className="rounded-2xl border border-stone-200/80 bg-white p-3 shadow-xs space-y-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={l.image}
+                        alt={l.name}
+                        className="h-12 w-12 rounded-xl object-cover border border-stone-200 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-bold text-stone-900 truncate">
+                          {l.qty} × {l.name}
+                        </p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              size={14}
+                              className={
+                                star <= r
+                                  ? 'fill-amber-500 text-amber-500'
+                                  : 'text-stone-200'
+                              }
+                            />
+                          ))}
+                          <span className="ml-1 text-[11px] font-bold text-amber-800">
+                            {r} / 5
+                          </span>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 shrink-0">
+                        Reviewed ✓
+                      </span>
+                    </div>
+
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1 border-t border-stone-100">
+                        {tags.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-lg bg-amber-50 px-2 py-0.5 text-[10.5px] font-medium text-amber-900 border border-amber-200/60"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {comment && (
+                      <p className="text-[11.5px] text-stone-600 bg-stone-50 rounded-xl p-2 italic border border-stone-200">
+                        "{comment}"
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Social Channels & Google Maps */}
+              <div className="space-y-2.5 pt-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                  Share your review online
+                </p>
+
+                {/* Google Maps Review */}
+                <a
+                  href={GOOGLE_MAPS_REVIEW_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    toast('Opening Google Maps for review. Thank you!', 'success');
+                  }}
+                  className="flex items-center justify-between p-3.5 rounded-2xl bg-white border-2 border-amber-400 hover:border-amber-500 hover:bg-amber-50/20 shadow-xs transition active:scale-[0.98] group cursor-pointer"
                 >
-                  <span className={star <= rating ? 'text-amber-500 drop-shadow-sm' : 'text-stone-300'}>★</span>
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-white shadow-xs border border-stone-200 shrink-0">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-black text-stone-900 group-hover:text-blue-600 flex items-center gap-1.5">
+                        Post Review on Google Maps
+                        <ExternalLink size={12} className="text-stone-400" />
+                      </p>
+                      <p className="text-[11px] text-stone-500">
+                        Help others find delicious dishes at Ivan Caffe
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-xl bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-bold text-stone-950 shrink-0 shadow-xs">
+                    Review ★
+                  </span>
+                </a>
+
+                {/* Facebook Channel Card */}
+                <a
+                  href={FACEBOOK_CHANNEL_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-3 rounded-2xl bg-white border border-stone-200 hover:border-blue-300 transition active:scale-[0.98] group shadow-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#1877F2] text-white shrink-0 shadow-xs">
+                      <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-stone-900 group-hover:text-[#1877F2] flex items-center gap-1">
+                        Visit Our Facebook Channel
+                        <ExternalLink size={11} className="text-stone-400" />
+                      </p>
+                      <p className="text-[10.5px] text-stone-500">
+                        Follow us for special offers &amp; updates
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-lg bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 text-[11px] font-bold shrink-0">
+                    Follow
+                  </span>
+                </a>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleCloseFeedback}
+                  className="w-full rounded-2xl bg-stone-900 hover:bg-stone-800 text-white py-3 text-xs font-bold shadow-xs transition active:scale-[0.98]"
+                >
+                  Done
                 </button>
-              ))}
+              </div>
             </div>
-            <p className="text-[12px] font-bold text-amber-800 mt-1.5">
-              {rating === 5 ? '⭐⭐⭐⭐⭐ Loved it! (5 Stars)' : `${rating} Stars Selected`}
-            </p>
-          </div>
+          ) : (
+            /* Interactive Dish Rating Form */
+            <div className="space-y-3.5">
+              {order.lines.map((l) => {
+                const curRating = itemRatings[l.lineId]?.rating ?? 5;
+                const curComment = itemRatings[l.lineId]?.comment ?? '';
+                const curTags = itemRatings[l.lineId]?.tags ?? [];
 
-          {/* 1. Google Maps Review */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                ⭐ Give Feedback on Google
-              </p>
-              <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                Google Verified
-              </span>
+                return (
+                  <div
+                    key={l.lineId}
+                    className="rounded-2xl border border-stone-200/90 bg-white p-3.5 shadow-xs space-y-3"
+                  >
+                    {/* Item Info & Stars */}
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={l.image}
+                        alt={l.name}
+                        className="h-14 w-14 rounded-xl object-cover border border-stone-200 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13.5px] font-bold text-stone-900 leading-tight">
+                          {l.qty} × {l.name}
+                        </p>
+                        <p className="text-[11px] text-stone-500 mt-0.5">
+                          Tap stars to rate this dish:
+                        </p>
+
+                        {/* 5-Star Interactive Selector */}
+                        <div className="flex items-center gap-1 mt-1.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => handleItemRatingChange(l.lineId, star)}
+                              className="p-0.5 transition hover:scale-125 active:scale-95 focus:outline-none"
+                              title={`${star} Star`}
+                            >
+                              <Star
+                                size={22}
+                                className={`${
+                                  star <= curRating
+                                    ? 'fill-amber-500 text-amber-500 drop-shadow-xs'
+                                    : 'text-stone-300 hover:text-amber-300'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                          <span className="ml-1.5 text-xs font-black text-amber-800">
+                            {curRating === 5
+                              ? '5★ Loved it!'
+                              : curRating === 4
+                                ? '4★ Very good'
+                                : curRating === 3
+                                  ? '3★ Average'
+                                  : `${curRating}★`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Sentiment Tags */}
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+                        Quick tags:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {QUICK_REVIEW_TAGS.map((tag) => {
+                          const active = curTags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleTagToggle(l.lineId, tag)}
+                              className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+                                active
+                                  ? 'bg-amber-500 text-stone-950 shadow-xs font-bold'
+                                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200/80 border border-stone-200/60'
+                              }`}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Optional Note */}
+                    <div>
+                      <input
+                        type="text"
+                        value={curComment}
+                        onChange={(e) => handleCommentChange(l.lineId, e.target.value)}
+                        placeholder="Short comment (e.g. Perfectly cooked, loved the dip)..."
+                        className="w-full rounded-xl border border-stone-200 bg-stone-50/70 px-3 py-2 text-xs text-stone-800 placeholder-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Submit Ratings Button */}
+              <div className="pt-1 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSubmitItemReviews}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#18392B] hover:bg-[#122A20] text-white py-3.5 text-xs font-bold shadow-md shadow-stone-900/10 transition active:scale-[0.98]"
+                >
+                  <Star size={15} className="fill-amber-400 text-amber-400" />
+                  <span>Submit Dish Ratings ({order.lines.length} Items)</span>
+                </button>
+
+                {isEditingReview && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingReview(false)}
+                    className="rounded-2xl border border-stone-300 bg-white px-4 py-3.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleCloseFeedback}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold text-stone-500 hover:text-stone-800 transition text-center cursor-pointer"
+                >
+                  Maybe Later · Close
+                </button>
+              </div>
             </div>
-
-            <a
-              href={GOOGLE_MAPS_REVIEW_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                toast('Opening Google Maps for review. Thank you!', 'success');
-              }}
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-white border-2 border-amber-400 hover:border-amber-500 hover:bg-amber-50/20 shadow-md transition active:scale-[0.98] group cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white shadow-sm border border-stone-200 shrink-0">
-                  <svg className="h-6 w-6" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-black text-stone-900 group-hover:text-blue-600 flex items-center gap-1.5">
-                    Rate &amp; Review on Google
-                    <ExternalLink size={13} className="text-stone-400" />
-                  </p>
-                  <p className="text-[11px] text-stone-500">
-                    Post your {rating}-star review on Google Maps
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-xl bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-bold text-stone-950 shrink-0 shadow-xs">
-                Review ★
-              </span>
-            </a>
-          </div>
-
-          {/* 2. Want to visit our channels? */}
-          <div className="space-y-2 pt-1">
-            <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-              📢 Want to visit our channel?
-            </p>
-
-            {/* Facebook Channel Card */}
-            <a
-              href={FACEBOOK_CHANNEL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-stone-200 hover:border-blue-300 hover:bg-blue-50/30 transition active:scale-[0.98] group shadow-xs cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#1877F2] text-white shrink-0 shadow-sm">
-                  <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold text-stone-900 group-hover:text-[#1877F2] flex items-center gap-1.5">
-                    Visit Our Facebook Channel
-                    <ExternalLink size={13} className="text-stone-400" />
-                  </p>
-                  <p className="text-[11px] text-stone-500">
-                    Follow us for new dishes, offers &amp; updates
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-xl bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 text-xs font-bold shrink-0">
-                Follow
-              </span>
-            </a>
-
-            {/* Google Maps Location Card */}
-            <a
-              href={GOOGLE_MAPS_REVIEW_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition active:scale-[0.98] group shadow-xs cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-600 text-white shrink-0 shadow-sm">
-                  <MapPin size={20} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold text-stone-900 group-hover:text-emerald-700 flex items-center gap-1.5">
-                    Find Us on Google Maps
-                    <ExternalLink size={13} className="text-stone-400" />
-                  </p>
-                  <p className="text-[11px] text-stone-500">
-                    Location, directions, photos &amp; reviews
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs font-bold shrink-0">
-                Open Maps
-              </span>
-            </a>
-          </div>
-
-          {/* Optional Close / Skip Button */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setFeedbackOpen(false);
-                toast('Thank you for visiting Ivan Food Court!', 'info');
-              }}
-              className="w-full py-2.5 rounded-xl text-xs font-semibold text-stone-500 hover:text-stone-800 transition text-center cursor-pointer"
-            >
-              Maybe Later · Close
-            </button>
-          </div>
+          )}
         </div>
       </Sheet>
     </div>
