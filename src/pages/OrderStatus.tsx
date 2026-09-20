@@ -43,7 +43,7 @@ const QUICK_REVIEW_TAGS = [
   'Average 😐',
 ];
 
-const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
+const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Cleaning'];
 
 const CANCEL_REASONS = [
   'Ordered by mistake',
@@ -65,7 +65,6 @@ export default function OrderStatusPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState(CANCEL_REASONS[0]);
   const [cancelNote, setCancelNote] = useState('');
-  const [billRequested, setBillRequested] = useState(false);
   const [reason, setReason] = useState<CallReason>('Assistance');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [ratingPromptDismissed, setRatingPromptDismissed] = useState(false);
@@ -425,31 +424,18 @@ export default function OrderStatusPage() {
                 <p className="mt-1 text-xs text-stone-600 leading-relaxed">
                   {order.diningMode === 'Takeaway'
                     ? 'Your parcel is being cooked fresh in the kitchen! Please collect your takeaway bag from the counter when ready and settle your bill.'
-                    : `Your order is confirmed! Enjoy your food at Table ${order.tableCode}. You can comfortably pay after eating at the counter or request the bill directly to your table.`}
+                    : `Your order is confirmed! Enjoy your food at Table ${order.tableCode}. Please settle your bill at the counter when you leave.`}
                 </p>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      actions.callStaff(order.tableCode, 'Request bill');
-                      setBillRequested(true);
-                      toast('Bill requested! A server will bring the bill to Table ' + order.tableCode, 'success');
-                    }}
-                    className="rounded-xl bg-[#18392B] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#122A20] active:scale-95 flex items-center gap-1.5"
-                  >
-                    <Receipt size={14} />
-                    <span>{billRequested ? 'Bill Requested ✓' : 'Request Bill (After Meal)'}</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => setFeedbackOpen(true)}
-                    className="rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-100 flex items-center gap-1.5"
+                    className="rounded-xl border border-amber-400 bg-amber-50/90 px-3.5 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-100 active:scale-95 flex items-center gap-1.5 shadow-xs cursor-pointer"
                     title="Give feedback & visit our channels"
                   >
                     <Star size={14} className="fill-amber-500 text-amber-500" />
-                    <span>{isOrderReviewed ? 'Dish Ratings & Review' : 'Rate Food & Feedback'}</span>
+                    <span>Feedback &amp; Channels</span>
                   </button>
                 </div>
               </div>
