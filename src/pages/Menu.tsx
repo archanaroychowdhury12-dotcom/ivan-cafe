@@ -39,7 +39,12 @@ import { getAllItemRatings } from '../lib/reviews';
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
 
-const getCategoryShortName = (name: string) => {
+const getCategoryShortName = (name: string, id: string) => {
+  if (id === 'all') return 'All';
+  if (id === 'top-rated') return 'Top Rated';
+  if (id === 'cat-snacks' || id === 'c-chicken-snacks') return 'Snacks';
+  if (id === 'c-egg-lolly') return 'Egg Lolly';
+  if (id === 'cat-milkshake' || id === 'c-lassi') return 'Lassi';
   const base = name.split(' (')[0].trim();
   if (base.toLowerCase() === 'snacks & bites') return 'Snacks';
   if (base.toLowerCase() === 'egg lolly pop') return 'Egg Lolly';
@@ -47,44 +52,61 @@ const getCategoryShortName = (name: string) => {
 };
 
 const renderCategoryIcon = (c: Category, isActive: boolean) => {
-  const iconProps = { size: 23, strokeWidth: 2.2 };
+  const iconProps = { size: 24, strokeWidth: 2.2 };
+  if (isActive) {
+    switch (c.id) {
+      case 'c-coffee':
+        return <Coffee {...iconProps} className="text-white" />;
+      case 'c-tea':
+        return <Leaf {...iconProps} className="text-white" />;
+      case 'c-mocktails':
+      case 'cat-milkshake':
+      case 'c-lassi':
+        return <CupSoda {...iconProps} className="text-white" />;
+      case 'cat-snacks':
+      case 'c-chicken-snacks':
+        return <UtensilsCrossed {...iconProps} className="text-white" />;
+      case 'c-starters':
+        return <Flame {...iconProps} className="text-white" />;
+      default:
+        if (c.emoji) {
+          return <span className="text-[22px] leading-none filter brightness-125">{c.emoji}</span>;
+        }
+        return <Utensils {...iconProps} className="text-white" />;
+    }
+  }
+
   switch (c.id) {
     case 'c-coffee':
-      return <Coffee {...iconProps} className={isActive ? 'text-white' : 'text-[#8B5A2B]'} />;
+      return <Coffee {...iconProps} className="text-[#8B5A2B]" />;
     case 'c-tea':
-      return <Leaf {...iconProps} className={isActive ? 'text-white' : 'text-[#388E3C]'} />;
+      return <Leaf {...iconProps} className="text-[#388E3C]" />;
     case 'c-mocktails':
     case 'cat-milkshake':
     case 'c-lassi':
-      return <CupSoda {...iconProps} className={isActive ? 'text-white' : 'text-[#2A9D8F]'} />;
+      return <CupSoda {...iconProps} className="text-[#0284C7]" />;
     case 'cat-snacks':
     case 'c-chicken-snacks':
-      return <UtensilsCrossed {...iconProps} className={isActive ? 'text-white' : 'text-[#E76F51]'} />;
+      return <span className="text-[22px] leading-none">🍟</span>;
     case 'c-starters':
-      return <Flame {...iconProps} className={isActive ? 'text-white' : 'text-[#E63946]'} />;
+      return <Flame {...iconProps} className="text-[#E11D48]" />;
     case 'cat-momos':
+      return <span className="text-[22px] leading-none">🥟</span>;
     case 'c-rice':
-    case 'c-noodles':
+      return <span className="text-[22px] leading-none">🍚</span>;
     case 'c-soups':
+      return <Soup {...iconProps} className="text-[#D97706]" />;
+    case 'c-noodles':
+      return <span className="text-[22px] leading-none">🍜</span>;
     case 'c-shawarma':
+      return <span className="text-[22px] leading-none">🌯</span>;
     case 'c-egg-lolly':
-      if (c.emoji) {
-        return (
-          <span className={`text-[22px] leading-none transition-transform ${isActive ? 'filter brightness-125' : ''}`}>
-            {c.emoji}
-          </span>
-        );
-      }
-      return <Utensils {...iconProps} className={isActive ? 'text-white' : 'text-[#D97706]'} />;
+      return <span className="text-[22px] leading-none">🍳</span>;
     default:
       if (c.emoji) {
-        return (
-          <span className={`text-[22px] leading-none transition-transform ${isActive ? 'filter brightness-125' : ''}`}>
-            {c.emoji}
-          </span>
-        );
+        return <span className="text-[22px] leading-none">{c.emoji}</span>;
       }
-      return <Utensils {...iconProps} className={isActive ? 'text-white' : 'text-stone-600'} />;
+      return <Utensils {...iconProps} className="text-stone-700" />;
   }
 };
 
@@ -318,73 +340,68 @@ export default function MenuPage() {
       {/* ---------------------------------------------------- */}
       {/* 1. HERO HEADER AREA                                  */}
       {/* ---------------------------------------------------- */}
-      <header className="relative bg-[#17110D] text-white pt-6 pb-12 px-5 overflow-hidden">
+      {/* ---------------------------------------------------- */}
+      {/* 1. HERO HEADER AREA                                  */}
+      {/* ---------------------------------------------------- */}
+      <header className="relative bg-[#17110D] text-white pt-5 pb-10 px-4 sm:px-5 overflow-hidden">
         {/* Background ambient lighting and textures */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#3d281a_0%,#17110d_70%)] opacity-90 pointer-events-none" />
         <div className="absolute -top-16 -right-16 h-72 w-72 rounded-full bg-amber-600/15 blur-3xl pointer-events-none" />
 
-        {/* Top bar: Hamburger, Brand Center, Call Staff & Table selector Right */}
-        <div className="relative z-10 flex items-center justify-between gap-2">
+        {/* Top bar: Hamburger, Clean Brand Center, Call Staff & Table selector Right */}
+        <div className="relative z-10 flex items-center justify-between gap-2.5">
           {/* Hamburger Menu Button */}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 hover:bg-white/15 text-white/90 backdrop-blur-md transition active:scale-95"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 hover:bg-white/20 text-white/95 backdrop-blur-md transition active:scale-95 cursor-pointer"
             aria-label="Open menu options"
           >
             <MenuIcon size={20} strokeWidth={2.2} />
           </button>
 
-          {/* Center Brand Title - Styled exactly like media_1789455970200.png */}
-          <div className="text-center min-w-0 flex-1">
-            <div className="flex items-center justify-center gap-1.5 leading-none">
-              <span className="font-editorial text-[17px] sm:text-[19px] font-black tracking-wider text-[#FFB3C1] drop-shadow-[0_0_10px_rgba(255,179,193,0.55)]">
-                IVAN
-              </span>
-              <span className="text-amber-300 text-[16px] filter drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
-                🍽️
-              </span>
-              <span className="font-editorial text-[17px] sm:text-[19px] font-black tracking-wider text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.45)]">
-                FOOD COURT
-              </span>
-            </div>
-            <p className="text-[9px] font-bold tracking-[0.24em] text-[#D8B99A] uppercase mt-1">
+          {/* Center Brand Title - Clean, Elegant, Luxury Branding */}
+          <div className="text-center min-w-0 flex-1 px-1">
+            <h1 className="font-editorial text-[17px] sm:text-[19px] font-bold tracking-[0.18em] text-[#FFFDF9] uppercase drop-shadow-sm leading-tight truncate">
+              IVAN FOOD COURT
+            </h1>
+            <p className="text-[8.5px] font-bold tracking-[0.24em] text-[#E5B869] uppercase mt-0.5 opacity-90">
               — GOOD FOOD · GOOD MOOD —
             </p>
           </div>
 
-          {/* Right Action Buttons: Call Staff & Table */}
+          {/* Right Action Area: Glowing Call Staff + Table Selector */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* CALL STAFF BUTTON - EXTRA PROMINENT & EYE-CATCHING */}
+            {/* Call Staff Button: Compact, Glowing, Non-overlapping */}
             <button
               type="button"
               onClick={() => {
                 handleCallStaff('Assistance');
                 setCallOpen(true);
               }}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-stone-950 px-3 py-2 shadow-lg shadow-amber-500/30 border border-amber-300 transition active:scale-95 ring-2 ring-amber-400/30 cursor-pointer"
-              title="Call staff or waiter to your table"
+              className="h-10 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/25 to-amber-600/25 hover:from-amber-500/35 hover:to-amber-600/35 border border-amber-400/50 text-amber-300 flex items-center gap-1.5 transition active:scale-95 shadow-sm cursor-pointer"
+              title="Call staff / waiter to your table"
             >
-              <BellRing size={17} className="text-stone-950 fill-stone-950/25 animate-bounce shrink-0" />
-              <span className="text-[12px] font-black tracking-wide uppercase leading-none">Call Staff</span>
+              <BellRing size={16} className="text-amber-300 fill-amber-300/30 animate-pulse shrink-0" />
+              <span className="text-[11px] font-bold tracking-wide uppercase hidden xs:inline">Staff</span>
             </button>
 
             {/* Table Selection / Dining Mode Badge */}
             <button
               type="button"
               onClick={() => setTableModalOpen(true)}
-              className={`flex items-center gap-1.5 rounded-2xl px-3 py-1.5 backdrop-blur-md transition active:scale-95 text-left shadow-sm border ${
+              className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 backdrop-blur-md transition active:scale-95 text-left shadow-sm border cursor-pointer ${
                 diningMode === 'Takeaway'
                   ? 'bg-amber-600/30 hover:bg-amber-600/40 border-amber-400/40 text-amber-200'
-                  : 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+                  : 'bg-white/10 hover:bg-white/15 border-white/20 text-white'
               }`}
             >
               <div className="text-right">
-                <p className="text-[12px] font-black leading-none flex items-center gap-1">
+                <p className="text-[11.5px] font-bold leading-none flex items-center gap-1">
                   {diningMode === 'Takeaway' ? '🛍️ Takeaway' : `🍽️ ${table.code}`}
                   <ChevronDown size={11} className="opacity-70" />
                 </p>
-                <p className="text-[9px] text-[#D8B99A] font-bold uppercase tracking-wider mt-0.5">
+                <p className="text-[8.5px] text-[#E5B869] font-bold uppercase tracking-wider mt-0.5">
                   {diningMode === 'Takeaway' ? 'Parcel' : 'Dine-in'}
                 </p>
               </div>
@@ -392,44 +409,33 @@ export default function MenuPage() {
           </div>
         </div>
 
-        {/* Hero Banner Content: Good Food Good Mood (Exact Match to media_1789455970200.png) */}
-        <div className="relative z-10 mt-6 grid grid-cols-12 items-center gap-2">
-          {/* Left Text with Flourishes */}
-          <div className="col-span-6 space-y-1 pl-1">
-            <div className="flex items-center justify-between pr-4">
-              <span className="text-amber-400 text-lg font-hand leading-none select-none">୧୨</span>
-              <span className="text-amber-400 text-lg font-hand leading-none select-none">୨୧</span>
-            </div>
+        {/* Hero Banner: Luxury Cinematic Coffee Scene */}
+        <div className="relative z-10 mt-5 rounded-[26px] overflow-hidden shadow-2xl border border-white/10 bg-[#17110D]">
+          <div
+            className="relative w-full min-h-[175px] sm:min-h-[195px] bg-cover bg-right flex items-center px-5 sm:px-6 py-4"
+            style={{ backgroundImage: `url('/brand/hero_coffee_banner.jpg')` }}
+          >
+            {/* Dark gradient overlay for ultra-crisp readable typography */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#17110D] via-[#17110D]/80 to-transparent sm:via-[#17110D]/65 pointer-events-none" />
 
-            <h2 className="font-hand leading-[1.02] tracking-normal text-left my-0.5">
-              <span className="block text-[38px] sm:text-[44px] font-bold text-white drop-shadow-md">
-                Good Food
-              </span>
-              <span className="block text-[42px] sm:text-[48px] font-extrabold text-[#F3C06B] drop-shadow-md -mt-1">
-                Good Mood
-              </span>
-            </h2>
+            {/* Left Cursive Typography */}
+            <div className="relative z-10 max-w-[210px] sm:max-w-[250px] space-y-1">
+              <span className="text-[#E5B869] text-xs font-bold tracking-widest block opacity-90 select-none">✦ ✦</span>
 
-            <div className="flex items-center justify-between pr-4">
-              <span className="text-amber-400 text-lg font-hand leading-none select-none">୨୧</span>
-              <span className="text-amber-400 text-lg font-hand leading-none select-none">୨୧</span>
-            </div>
+              <h2 className="font-hand leading-[1.0] text-left">
+                <span className="block text-[36px] sm:text-[42px] font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                  Good Food
+                </span>
+                <span className="block text-[40px] sm:text-[46px] font-extrabold text-[#E5B869] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] -mt-1">
+                  Good Mood
+                </span>
+              </h2>
 
-            <p className="text-[11px] sm:text-[12px] font-medium text-stone-300/90 pt-1 tracking-wide leading-tight">
-              Fresh food &bull; Great coffee &bull; Cozy vibes
-            </p>
-          </div>
+              <span className="text-[#E5B869] text-xs font-bold tracking-widest block opacity-90 select-none">✦ ✦</span>
 
-          {/* Right Image: Signature Latte Cup with Heart Latte Art */}
-          <div className="col-span-6 flex justify-end relative">
-            <div className="relative w-full max-w-[210px] overflow-hidden rounded-2xl shadow-2xl">
-              <img
-                src="/brand/hero_coffee_exact.jpg"
-                alt="Signature Coffee with Heart Latte Art"
-                className="w-full h-auto object-cover scale-105"
-              />
-              <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#17110D] to-transparent pointer-events-none" />
-              <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#17110D]/70 to-transparent pointer-events-none" />
+              <p className="text-[11px] sm:text-[12px] font-medium text-stone-200 pt-0.5 tracking-wide leading-tight drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                Fresh food &bull; Great coffee &bull; Cozy vibes
+              </p>
             </div>
           </div>
         </div>
@@ -594,28 +600,28 @@ export default function MenuPage() {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* 3. CATEGORY GRID (LARGE SQUIRCLE CARDS - NO HORIZONTAL SCROLL) */}
+        {/* 3. CATEGORY GRID (SQUIRCLE CARDS - NO HORIZONTAL SCROLL) */}
         {/* ---------------------------------------------------- */}
-        <div className="mt-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-2 sm:gap-2.5">
+        <div className="mt-4 grid grid-cols-4 gap-2.5">
           {/* ALL Category Card */}
           <button
             type="button"
             onClick={() => setActiveCat('all')}
-            className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 sm:p-2.5 min-h-[78px] sm:min-h-[84px] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs ${
+            className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
               activeCat === 'all'
-                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/20 ring-1 ring-[#123826]'
-                : 'bg-white text-stone-800 border border-[#EDE8DF] hover:bg-[#FAF8F5] hover:border-stone-300'
+                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/25 ring-1 ring-[#123826]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
             }`}
           >
-            <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+            <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
               <Coffee
-                size={23}
+                size={24}
                 strokeWidth={2.2}
                 className={activeCat === 'all' ? 'text-white' : 'text-[#123826]'}
               />
             </div>
             <span
-              className={`mt-1.5 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+              className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
                 activeCat === 'all' ? 'text-white font-extrabold' : 'text-stone-800'
               }`}
             >
@@ -627,21 +633,21 @@ export default function MenuPage() {
           <button
             type="button"
             onClick={() => setActiveCat('top-rated')}
-            className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 sm:p-2.5 min-h-[78px] sm:min-h-[84px] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs ${
+            className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
               activeCat === 'top-rated'
-                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/20 ring-1 ring-[#123826]'
-                : 'bg-white text-stone-800 border border-[#EDE8DF] hover:bg-[#FAF8F5] hover:border-stone-300'
+                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/25 ring-1 ring-[#123826]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
             }`}
           >
-            <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+            <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
               <Sparkles
-                size={23}
+                size={24}
                 strokeWidth={2.2}
                 className={activeCat === 'top-rated' ? 'text-white' : 'text-amber-500'}
               />
             </div>
             <span
-              className={`mt-1.5 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+              className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
                 activeCat === 'top-rated' ? 'text-white font-extrabold' : 'text-stone-800'
               }`}
             >
@@ -652,23 +658,23 @@ export default function MenuPage() {
           {/* Dynamic Category Cards */}
           {categories.map((c) => {
             const isActive = activeCat === c.id;
-            const displayName = getCategoryShortName(c.name);
+            const displayName = getCategoryShortName(c.name, c.id);
             return (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => setActiveCat(c.id)}
-                className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 sm:p-2.5 min-h-[78px] sm:min-h-[84px] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs ${
+                className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
                   isActive
-                    ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/20 ring-1 ring-[#123826]'
-                    : 'bg-white text-stone-800 border border-[#EDE8DF] hover:bg-[#FAF8F5] hover:border-stone-300'
+                    ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/25 ring-1 ring-[#123826]'
+                    : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
                 }`}
               >
-                <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+                <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
                   {renderCategoryIcon(c, isActive)}
                 </div>
                 <span
-                  className={`mt-1.5 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                  className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
                     isActive ? 'text-white font-extrabold' : 'text-stone-800'
                   }`}
                 >
