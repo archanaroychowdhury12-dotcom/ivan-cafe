@@ -177,7 +177,7 @@ export function seedDB(): DB {
   return {
     version: 10,
     settings: {
-      cafeName: 'Ivan Caffe',
+      cafeName: 'Ivan Food Court',
       tagline: 'GOOD FOOD · GOOD MOOD',
       currency: '₹',
       taxPercent: 0,
@@ -185,7 +185,7 @@ export function seedDB(): DB {
       servicePercent: 0,
       serviceEnabled: false,
       acceptingOrders: true,
-      address: 'Ivan Caffe, Main Road',
+      address: 'Ivan Food Court, Main Road',
       hours: '09:00 — 23:00 · Every day',
       adminUser: 'admin',
       adminPass: 'ivan2026',

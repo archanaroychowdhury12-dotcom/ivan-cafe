@@ -39,7 +39,7 @@ export const STATUS_META: Record<
   },
   SERVED: {
     label: 'Served',
-    blurb: 'Enjoy your food! Thanks for visiting Ivan Caffe',
+    blurb: 'Enjoy your food! Thanks for visiting Ivan Food Court',
     icon: CheckCircle2,
     chip: 'bg-ink/10 text-ink border-ink/20',
     dot: 'bg-ink',

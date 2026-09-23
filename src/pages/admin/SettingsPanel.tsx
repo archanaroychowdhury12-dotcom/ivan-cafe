@@ -79,7 +79,7 @@ export default function SettingsPanel() {
         event: 'ping.test',
         timestamp: Math.floor(Date.now() / 1000),
         cafe: draft.cafeName,
-        message: 'Ivan Caffe Webhook Connection Test',
+        message: 'Ivan Food Court Webhook Connection Test',
       };
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',

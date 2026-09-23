@@ -127,7 +127,7 @@ export default function OrderStatusPage() {
       <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-4 text-center">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-600 border-t-transparent mb-4" />
         <h2 className="font-display text-lg font-bold text-stone-900">Loading Order #{code}...</h2>
-        <p className="mt-1 text-xs text-stone-500">Syncing live order from Ivan Caffe kitchen</p>
+        <p className="mt-1 text-xs text-stone-500">Syncing live order from Ivan Food Court kitchen</p>
       </div>
     );
   }
@@ -811,7 +811,7 @@ export default function OrderStatusPage() {
                         <ExternalLink size={12} className="text-stone-400" />
                       </p>
                       <p className="text-[11px] text-stone-500">
-                        Help others find delicious dishes at Ivan Caffe
+                        Help others find delicious dishes at Ivan Food Court
                       </p>
                     </div>
                   </div>

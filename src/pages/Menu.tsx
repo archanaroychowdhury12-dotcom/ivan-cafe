@@ -27,7 +27,7 @@ import {
 import { useCart, cart } from '../lib/cart';
 import { actions, useCategories, useItems, useOrders, useSettings, useTables } from '../lib/store';
 import { money } from '../lib/format';
-import type { CallReason, MenuItem } from '../lib/types';
+import type { CallReason, Category, MenuItem } from '../lib/types';
 import { ItemCard, KitchenDisplayCard } from '../components/customer/ItemCard';
 import { ItemSheet } from '../components/customer/ItemSheet';
 import { BottomNav } from '../components/customer/BottomNav';
@@ -38,37 +38,53 @@ import { getAllItemRatings } from '../lib/reviews';
 
 const REASONS: CallReason[] = ['Assistance', 'Water refill', 'Cutlery', 'Request bill', 'Cleaning'];
 
-// Icon mapping for category pills
-const getCategoryIcon = (id: string) => {
-  switch (id) {
-    case 'all':
-      return LayoutGrid;
-    case 'top-rated':
-      return Sparkles;
-    case 'c-tea':
-      return Leaf;
+
+const getCategoryShortName = (name: string) => {
+  const base = name.split(' (')[0].trim();
+  if (base.toLowerCase() === 'snacks & bites') return 'Snacks';
+  if (base.toLowerCase() === 'egg lolly pop') return 'Egg Lolly';
+  return base;
+};
+
+const renderCategoryIcon = (c: Category, isActive: boolean) => {
+  const iconProps = { size: 23, strokeWidth: 2.2 };
+  switch (c.id) {
     case 'c-coffee':
-      return Coffee;
-    case 'c-chicken-snacks':
-      return Utensils;
-    case 'c-shawarma':
-      return ChefHat;
-    case 'c-starters':
-      return Flame;
-    case 'c-noodles':
-      return UtensilsCrossed;
-    case 'c-rice':
-      return UtensilsCrossed;
-    case 'c-soups':
-      return Soup;
-    case 'c-lassi':
-      return CupSoda;
+      return <Coffee {...iconProps} className={isActive ? 'text-white' : 'text-[#8B5A2B]'} />;
+    case 'c-tea':
+      return <Leaf {...iconProps} className={isActive ? 'text-white' : 'text-[#388E3C]'} />;
     case 'c-mocktails':
-      return GlassWater;
+    case 'cat-milkshake':
+    case 'c-lassi':
+      return <CupSoda {...iconProps} className={isActive ? 'text-white' : 'text-[#2A9D8F]'} />;
+    case 'cat-snacks':
+    case 'c-chicken-snacks':
+      return <UtensilsCrossed {...iconProps} className={isActive ? 'text-white' : 'text-[#E76F51]'} />;
+    case 'c-starters':
+      return <Flame {...iconProps} className={isActive ? 'text-white' : 'text-[#E63946]'} />;
+    case 'cat-momos':
+    case 'c-rice':
+    case 'c-noodles':
+    case 'c-soups':
+    case 'c-shawarma':
     case 'c-egg-lolly':
-      return ChefHat;
+      if (c.emoji) {
+        return (
+          <span className={`text-[22px] leading-none transition-transform ${isActive ? 'filter brightness-125' : ''}`}>
+            {c.emoji}
+          </span>
+        );
+      }
+      return <Utensils {...iconProps} className={isActive ? 'text-white' : 'text-[#D97706]'} />;
     default:
-      return Utensils;
+      if (c.emoji) {
+        return (
+          <span className={`text-[22px] leading-none transition-transform ${isActive ? 'filter brightness-125' : ''}`}>
+            {c.emoji}
+          </span>
+        );
+      }
+      return <Utensils {...iconProps} className={isActive ? 'text-white' : 'text-stone-600'} />;
   }
 };
 
@@ -322,14 +338,14 @@ export default function MenuPage() {
           {/* Center Brand Title - Styled exactly like media_1789455970200.png */}
           <div className="text-center min-w-0 flex-1">
             <div className="flex items-center justify-center gap-1.5 leading-none">
-              <span className="font-editorial text-[19px] sm:text-[21px] font-black tracking-wider text-[#FFB3C1] drop-shadow-[0_0_10px_rgba(255,179,193,0.55)]">
+              <span className="font-editorial text-[17px] sm:text-[19px] font-black tracking-wider text-[#FFB3C1] drop-shadow-[0_0_10px_rgba(255,179,193,0.55)]">
                 IVAN
               </span>
-              <span className="text-amber-300 text-[18px] filter drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
-                ☕
+              <span className="text-amber-300 text-[16px] filter drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]">
+                🍽️
               </span>
-              <span className="font-editorial text-[19px] sm:text-[21px] font-black tracking-wider text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.45)]">
-                CAFFE
+              <span className="font-editorial text-[17px] sm:text-[19px] font-black tracking-wider text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.45)]">
+                FOOD COURT
               </span>
             </div>
             <p className="text-[9px] font-bold tracking-[0.24em] text-[#D8B99A] uppercase mt-1">
@@ -578,55 +594,86 @@ export default function MenuPage() {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* 3. HORIZONTAL CATEGORY BAR (COMPACT PILL CHIPS)     */}
+        {/* 3. CATEGORY GRID (LARGE SQUIRCLE CARDS - NO HORIZONTAL SCROLL) */}
         {/* ---------------------------------------------------- */}
-        <div className="no-scrollbar -mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1">
-          {/* ALL Category Pill */}
+        <div className="mt-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 gap-2 sm:gap-2.5">
+          {/* ALL Category Card */}
           <button
             type="button"
             onClick={() => setActiveCat('all')}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all shrink-0 text-[12.5px] font-bold shadow-2xs ${
+            className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 sm:p-2.5 min-h-[78px] sm:min-h-[84px] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs ${
               activeCat === 'all'
-                ? 'bg-[#202020] text-white shadow-sm ring-1 ring-stone-900'
-                : 'bg-white text-stone-700 border border-[#E7DCCE] hover:bg-[#F8F3EA]'
+                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/20 ring-1 ring-[#123826]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] hover:bg-[#FAF8F5] hover:border-stone-300'
             }`}
           >
-            <LayoutGrid size={15} strokeWidth={2.5} />
-            <span>All</span>
+            <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+              <Coffee
+                size={23}
+                strokeWidth={2.2}
+                className={activeCat === 'all' ? 'text-white' : 'text-[#123826]'}
+              />
+            </div>
+            <span
+              className={`mt-1.5 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                activeCat === 'all' ? 'text-white font-extrabold' : 'text-stone-800'
+              }`}
+            >
+              All
+            </span>
           </button>
 
-          {/* Top Rated / Most Loved Category Pill */}
+          {/* Top Rated Category Card */}
           <button
             type="button"
             onClick={() => setActiveCat('top-rated')}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all shrink-0 text-[12.5px] font-bold shadow-2xs ${
+            className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 sm:p-2.5 min-h-[78px] sm:min-h-[84px] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs ${
               activeCat === 'top-rated'
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-stone-950 shadow-sm ring-1 ring-amber-600 font-black'
-                : 'bg-amber-50 text-amber-900 border border-amber-300/80 hover:bg-amber-100/70'
+                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/20 ring-1 ring-[#123826]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] hover:bg-[#FAF8F5] hover:border-stone-300'
             }`}
           >
-            <Sparkles size={15} strokeWidth={2.5} className={activeCat === 'top-rated' ? 'text-stone-950' : 'text-amber-600'} />
-            <span>⭐ Top Rated / Most Loved</span>
+            <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+              <Sparkles
+                size={23}
+                strokeWidth={2.2}
+                className={activeCat === 'top-rated' ? 'text-white' : 'text-amber-500'}
+              />
+            </div>
+            <span
+              className={`mt-1.5 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                activeCat === 'top-rated' ? 'text-white font-extrabold' : 'text-stone-800'
+              }`}
+            >
+              Top Rated
+            </span>
           </button>
 
-          {/* Dynamic Category Pills */}
+          {/* Dynamic Category Cards */}
           {categories.map((c) => {
-            const Icon = getCategoryIcon(c.id);
             const isActive = activeCat === c.id;
-            const displayName = c.name.split(' (')[0];
+            const displayName = getCategoryShortName(c.name);
             return (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => setActiveCat(c.id)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-2 transition-all shrink-0 text-[12.5px] font-bold shadow-2xs ${
+                className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 sm:p-2.5 min-h-[78px] sm:min-h-[84px] transition-all duration-200 active:scale-95 cursor-pointer shadow-xs ${
                   isActive
-                    ? 'bg-[#F6DFC2] text-stone-900 border border-[#EACBA3] shadow-xs'
-                    : 'bg-white text-stone-700 border border-[#E7DCCE] hover:bg-[#F8F3EA]'
+                    ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/20 ring-1 ring-[#123826]'
+                    : 'bg-white text-stone-800 border border-[#EDE8DF] hover:bg-[#FAF8F5] hover:border-stone-300'
                 }`}
               >
-                <Icon size={15} strokeWidth={2.2} className={isActive ? 'text-amber-800' : 'text-stone-500'} />
-                <span>{displayName}</span>
+                <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+                  {renderCategoryIcon(c, isActive)}
+                </div>
+                <span
+                  className={`mt-1.5 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                    isActive ? 'text-white font-extrabold' : 'text-stone-800'
+                  }`}
+                >
+                  {displayName}
+                </span>
               </button>
             );
           })}
