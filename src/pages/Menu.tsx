@@ -555,32 +555,58 @@ export default function MenuPage() {
         </div>
 
         {/* ---------------------------------------------------- */}
-        {/* 3. CATEGORY PILLS CAROUSEL (MATCHES SCREENSHOT)      */}
+        {/* 3. CATEGORY GRID (SQUIRCLE CARDS - STACKED ROWS)     */}
         {/* ---------------------------------------------------- */}
-        <div className="mt-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
+        <div className="mt-4 grid grid-cols-4 gap-2.5">
           {/* ALL Category Card */}
           <button
             type="button"
             onClick={() => setActiveCat('all')}
-            className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 h-[78px] min-w-[68px] shrink-0 transition-all duration-200 active:scale-95 cursor-pointer ${
+            className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
               activeCat === 'all'
                 ? 'bg-[#143E35] text-white shadow-md shadow-[#143E35]/25 ring-1 ring-[#143E35]'
-                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
             }`}
           >
-            <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+            <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
               <Coffee
-                size={22}
+                size={24}
                 strokeWidth={2.2}
                 className={activeCat === 'all' ? 'text-white' : 'text-[#143E35]'}
               />
             </div>
             <span
-              className={`mt-1 text-[11px] font-bold text-center leading-tight tracking-tight ${
+              className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
                 activeCat === 'all' ? 'text-white font-extrabold' : 'text-stone-800'
               }`}
             >
               All
+            </span>
+          </button>
+
+          {/* Top Rated Category Card */}
+          <button
+            type="button"
+            onClick={() => setActiveCat('top-rated')}
+            className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
+              activeCat === 'top-rated'
+                ? 'bg-[#143E35] text-white shadow-md shadow-[#143E35]/25 ring-1 ring-[#143E35]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
+            }`}
+          >
+            <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
+              <Sparkles
+                size={24}
+                strokeWidth={2.2}
+                className={activeCat === 'top-rated' ? 'text-white' : 'text-amber-500'}
+              />
+            </div>
+            <span
+              className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                activeCat === 'top-rated' ? 'text-white font-extrabold' : 'text-stone-800'
+              }`}
+            >
+              Top Rated
             </span>
           </button>
 
@@ -593,17 +619,17 @@ export default function MenuPage() {
                 key={c.id}
                 type="button"
                 onClick={() => setActiveCat(c.id)}
-                className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 h-[78px] min-w-[68px] shrink-0 transition-all duration-200 active:scale-95 cursor-pointer ${
+                className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
                   isActive
                     ? 'bg-[#143E35] text-white shadow-md shadow-[#143E35]/25 ring-1 ring-[#143E35]'
-                    : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5]'
+                    : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
                 }`}
               >
-                <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
+                <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
                   {renderCategoryIcon(c, isActive)}
                 </div>
                 <span
-                  className={`mt-1 text-[11px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                  className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
                     isActive ? 'text-white font-extrabold' : 'text-stone-800'
                   }`}
                 >
