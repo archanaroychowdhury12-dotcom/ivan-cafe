@@ -178,6 +178,19 @@ export function mapCallToDb(c: StaffCall) {
 
 export function mapSettingsFromDb(row: any, fallback: Settings): Settings {
   if (!row) return fallback;
+  let parsedOffer = fallback.offer;
+  let webhookSecretVal = row.webhook_secret || '';
+  if (typeof webhookSecretVal === 'string' && webhookSecretVal.startsWith('OFFER_JSON:')) {
+    try {
+      parsedOffer = JSON.parse(webhookSecretVal.slice('OFFER_JSON:'.length));
+      webhookSecretVal = '';
+    } catch {
+      /* keep fallback */
+    }
+  } else if (row.offer && typeof row.offer === 'object') {
+    parsedOffer = row.offer;
+  }
+
   return {
     cafeName: row.cafe_name || fallback.cafeName,
     tagline: row.tagline || fallback.tagline,
@@ -194,9 +207,10 @@ export function mapSettingsFromDb(row: any, fallback: Settings): Settings {
     adminPass: (typeof localStorage !== 'undefined' && localStorage.getItem('ivan_admin_pass')) || fallback.adminPass || 'ivan2026',
     customDomain: row.custom_domain || fallback.customDomain,
     webhookUrl: row.webhook_url || '',
-    webhookSecret: row.webhook_secret || '',
+    webhookSecret: webhookSecretVal,
     webhookEnabled: Boolean(row.webhook_enabled),
     autoPrintOrders: Boolean(row.auto_print_orders),
+    offer: parsedOffer,
   };
 }
 
@@ -217,7 +231,7 @@ export function mapSettingsToDb(s: Settings) {
     admin_pass_hash: s.adminPassHash,
     custom_domain: s.customDomain || null,
     webhook_url: s.webhookUrl || '',
-    webhook_secret: s.webhookSecret || '',
+    webhook_secret: s.offer ? `OFFER_JSON:${JSON.stringify(s.offer)}` : (s.webhookSecret || ''),
     webhook_enabled: Boolean(s.webhookEnabled),
     auto_print_orders: Boolean(s.autoPrintOrders),
   };
