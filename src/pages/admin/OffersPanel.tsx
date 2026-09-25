@@ -1,27 +1,23 @@
 import { useEffect, useState } from 'react';
 import {
+  Check,
   CheckCircle2,
-  Coffee,
-  Flame,
-  HelpCircle,
-  Image as ImageIcon,
+  Eye,
+  EyeOff,
   Megaphone,
-  Percent,
-  RefreshCw,
   Save,
   Sparkles,
-  Tag,
-  UtensilsCrossed,
 } from 'lucide-react';
 import { actions, useCategories, useSettings } from '../../lib/store';
 import type { PromoOffer } from '../../lib/types';
 import { defaultPromoOffer } from '../../lib/seed';
-import { Button, Toggle, inputCx, useToast } from '../../components/ui';
+import { useToast } from '../../components/ui';
 
-const PRESET_OFFERS: { name: string; icon: string; data: PromoOffer }[] = [
+const QUICK_OFFERS: { name: string; badge: string; emoji: string; data: PromoOffer }[] = [
   {
-    name: '☕ 20% Off on Coffee (Screenshot Match)',
-    icon: '☕',
+    name: 'Coffee 20% Off',
+    badge: '20% OFF',
+    emoji: '☕',
     data: {
       enabled: true,
       tag: "Today's Special",
@@ -34,59 +30,62 @@ const PRESET_OFFERS: { name: string; icon: string; data: PromoOffer }[] = [
     },
   },
   {
-    name: '🍗 Crispy Chicken Snacks Combo',
-    icon: '🍗',
+    name: 'Malai Cha Special',
+    badge: '10% OFF',
+    emoji: '🍵',
     data: {
       enabled: true,
-      tag: "Chef's Choice",
-      title: '15% Off on Hot Chicken Snacks',
-      subtitle: 'Crispy chicken popcorn & fries to make your day!',
-      buttonText: 'Explore Snacks →',
-      image: '/brand/chicken_snacks_hero.jpg',
-      targetCategory: 'c-chicken-snacks',
-      discountPercent: 15,
-    },
-  },
-  {
-    name: '🍵 Special Malai Cha & Bites',
-    icon: '🍵',
-    data: {
-      enabled: true,
-      tag: 'Morning Special',
-      title: 'Special Malai Cha Combo',
-      subtitle: 'Brewed fresh with rich clotted cream and traditional aroma!',
-      buttonText: 'Order Chai →',
+      tag: 'Evening Special',
+      title: 'Special Malai Cha Offer',
+      subtitle: 'Rich creamy Malai Cha brewed fresh for you!',
+      buttonText: 'Order Tea →',
       image: '/menu/malai_cha_hd.jpg',
       targetCategory: 'c-tea',
       discountPercent: 10,
     },
   },
   {
-    name: '🍲 Chinese Sizzler Feast',
-    icon: '🍲',
+    name: 'Chicken Snacks Deal',
+    badge: '15% OFF',
+    emoji: '🍗',
     data: {
       enabled: true,
-      tag: 'Limited Time Deal',
-      title: 'Get Free Beverage with Sizzlers',
-      subtitle: 'Order any Chinese Sizzler or Fried Rice bowl today!',
-      buttonText: 'View Meals →',
-      image: '/menu/chinese_sizzler_hd.jpg',
-      targetCategory: 'c-rice',
+      tag: "Chef's Choice",
+      title: '15% Off on Chicken Snacks',
+      subtitle: 'Hot & crispy chicken snacks freshly fried!',
+      buttonText: 'View Snacks →',
+      image: '/brand/chicken_snacks_hero.jpg',
+      targetCategory: 'c-chicken-snacks',
+      discountPercent: 15,
+    },
+  },
+  {
+    name: 'Shawarma Combo',
+    badge: '25% OFF',
+    emoji: '🌯',
+    data: {
+      enabled: true,
+      tag: 'Bestseller Deal',
+      title: '25% Off on Chicken Shawarma',
+      subtitle: 'Juicy roasted chicken shawarma roll with extra mayo!',
+      buttonText: 'Order Now →',
+      image: '/menu/shawarma_roll_hd.jpg',
+      targetCategory: 'c-shawarma',
       discountPercent: 25,
     },
   },
 ];
 
-const PRESET_IMAGES = [
-  { label: 'Cold Coffee Frappe', url: '/brand/promo_coffee_offer.jpg' },
-  { label: 'Iced Frappe Glass', url: '/menu/frappe.jpg' },
-  { label: 'Hot Cappuccino', url: '/menu/cappuccino.jpg' },
-  { label: 'Creamy Malai Cha', url: '/menu/malai_cha_hd.jpg' },
-  { label: 'Chicken Popcorn & Snacks', url: '/brand/chicken_snacks_hero.jpg' },
-  { label: 'Chinese Sizzler Platter', url: '/menu/chinese_sizzler_hd.jpg' },
-  { label: 'Veg Pizza', url: '/menu/veg_pizza.jpg' },
-  { label: 'Crispy Spring Rolls', url: '/menu/spring_roll.jpg' },
+const PHOTO_OPTIONS = [
+  { label: 'Coffee', url: '/brand/promo_coffee_offer.jpg' },
+  { label: 'Malai Cha', url: '/menu/malai_cha_hd.jpg' },
+  { label: 'Chicken Snacks', url: '/brand/chicken_snacks_hero.jpg' },
+  { label: 'Shawarma', url: '/menu/shawarma_roll_hd.jpg' },
+  { label: 'Chinese Rice', url: '/menu/chinese_sizzler_hd.jpg' },
+  { label: 'Cold Coffee', url: '/menu/cold_coffee_special.jpg' },
 ];
+
+const DISCOUNT_CHIPS = [0, 10, 15, 20, 25, 30, 50];
 
 export default function OffersPanel() {
   const settings = useSettings();
@@ -103,352 +102,374 @@ export default function OffersPanel() {
     }
   }, [settings.offer]);
 
-  const handleSave = () => {
-    actions.saveSettings({ offer: draft });
+  const saveOffer = (nextOffer: PromoOffer, message = 'Offer saved & updated on live menu!') => {
+    setDraft(nextOffer);
+    actions.saveSettings({ offer: nextOffer });
     setSaved(true);
-    toast('Special offer updated successfully! Visible on customer menu.');
-    setTimeout(() => setSaved(false), 2500);
+    toast(message, 'success');
+    setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleApplyPreset = (preset: PromoOffer) => {
-    setDraft({ ...preset });
-    toast(`Applied preset: "${preset.title}"`);
+  const handleToggleEnabled = () => {
+    const next = { ...draft, enabled: !draft.enabled };
+    saveOffer(
+      next,
+      next.enabled
+        ? 'Offer is now LIVE on the customer menu!'
+        : 'Offer hidden from the customer menu.',
+    );
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      {/* 1. Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-[#17110D] via-[#2A1D15] to-[#17110D] p-6 text-white shadow-xl border border-amber-900/30">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-400/30">
-              <Megaphone size={18} />
-            </span>
-            <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              Special Offers & Promos
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                অফার সেকশন
-              </span>
-            </h2>
+    <div className="mx-auto max-w-4xl space-y-5">
+      {/* ---------------- Top Simple Status & ON/OFF Card ---------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[26px] border border-[#DCE5DC] bg-gradient-to-r from-[#F1F5F0] to-[#E8EFE8] p-5 shadow-2xs">
+        <div className="flex items-center gap-3.5">
+          <div
+            className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white shadow-sm ${
+              draft.enabled ? 'bg-[#113626]' : 'bg-[#7A756C]'
+            }`}
+          >
+            <Megaphone size={22} />
           </div>
-          <p className="text-xs text-stone-300 max-w-xl">
-            Control the promotional card displayed directly under the hero banner on the customer mobile menu.
-            Customers can see the offer, discount and jump directly to the target category.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-editorial text-[20px] font-bold text-[#18221D]">
+                Customer Menu Offer Banner
+              </h2>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-[11px] font-bold ${
+                  draft.enabled
+                    ? 'bg-[#1D7E48]/15 text-[#1B5E37]'
+                    : 'bg-stone-200 text-stone-600'
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    draft.enabled ? 'bg-[#1D7E48]' : 'bg-stone-500'
+                  }`}
+                />
+                {draft.enabled ? 'Active (চলেছে)' : 'Off (বন্ধ আছে)'}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[13px] text-[#5C6660]">
+              কাস্টমার যখন QR স্ক্যান করে মেনু খুলবে, তখন উপরে এই স্পেশাল অফারটি দেখতে পাবে।
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+        <button
+          type="button"
+          onClick={handleToggleEnabled}
+          className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold transition shadow-xs cursor-pointer ${
             draft.enabled
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-              : 'bg-stone-800 text-stone-400 border-stone-700'
-          }`}>
-            <span className={`h-2 w-2 rounded-full ${draft.enabled ? 'bg-emerald-400 animate-pulse' : 'bg-stone-500'}`} />
-            {draft.enabled ? 'Offer Live on Menu' : 'Offer Hidden'}
-          </div>
+              ? 'border border-rose-200 bg-white text-rose-700 hover:bg-rose-50'
+              : 'bg-[#113626] text-white hover:bg-[#194B35]'
+          }`}
+        >
+          {draft.enabled ? (
+            <>
+              <EyeOff size={15} /> Turn Off Offer (বন্ধ করুন)
+            </>
+          ) : (
+            <>
+              <Eye size={15} /> Turn On Offer (চালু করুন)
+            </>
+          )}
+        </button>
+      </div>
 
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-4 py-2"
-          >
-            {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Saved!' : 'Save & Publish'}
-          </Button>
+      {/* ---------------- Step 1: 1-Click Ready Templates ---------------- */}
+      <div className="rounded-[26px] border border-[#E4DEC9] bg-[#FAF8F4] p-5 shadow-2xs">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-[#113626] text-[12px] font-bold text-white">
+              1
+            </span>
+            <h3 className="font-editorial text-[17px] font-bold text-[#1D2420]">
+              Ready Offers (১-ক্লিকে যেকোনো একটি বেছে নিন)
+            </h3>
+          </div>
+          <span className="text-[12px] font-medium text-[#7A756C]">Click to apply instantly</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {QUICK_OFFERS.map((item, idx) => {
+            const isSelected = draft.title === item.data.title;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() =>
+                  saveOffer(
+                    { ...item.data, enabled: true },
+                    `"${item.name}" অফারটি চালু করা হয়েছে!`,
+                  )
+                }
+                className={`group flex flex-col justify-between rounded-2xl border p-3.5 text-left transition cursor-pointer ${
+                  isSelected
+                    ? 'border-[#113626] bg-[#EFF4EF] ring-2 ring-[#113626]/15'
+                    : 'border-[#E5DFD2] bg-white hover:border-[#113626]/50'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{item.emoji}</span>
+                    <span className="rounded-full bg-[#FBF2EB] px-2.5 py-0.5 text-[11px] font-extrabold text-[#C8562E]">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <p className="mt-2 font-editorial text-[15px] font-bold text-[#1D2420]">
+                    {item.name}
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-[11.5px] text-[#6E6A61]">
+                    {item.data.title}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex items-center gap-1 text-[11.5px] font-bold text-[#113626]">
+                  {isSelected ? (
+                    <>
+                      <CheckCircle2 size={13} className="text-[#1D7E48]" /> Currently Selected
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={12} /> Use this offer →
+                    </>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 2. LIVE PREVIEW: Customer View Card Mockup */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
-            <Sparkles size={14} className="text-amber-600" />
-            Live Customer Preview (Exact Menu Appearance)
-          </label>
-          <span className="text-[11px] text-stone-400">
-            {draft.enabled ? '✓ Enabled' : '⚠ Currently disabled (hidden from customers)'}
-          </span>
-        </div>
+      {/* ---------------- Step 2: Simple Customizer + Live Preview ---------------- */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        {/* Left: 3 Easy Fields */}
+        <div className="space-y-4 rounded-[26px] border border-[#E4DEC9] bg-[#FAF8F4] p-5 shadow-2xs lg:col-span-7">
+          <div className="flex items-center gap-2 border-b border-[#EAE4D7] pb-3">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-[#113626] text-[12px] font-bold text-white">
+              2
+            </span>
+            <h3 className="font-editorial text-[17px] font-bold text-[#1D2420]">
+              Customize Offer (নিজের মতো পরিবর্তন করুন)
+            </h3>
+          </div>
 
-        <div className={`rounded-3xl p-4 sm:p-6 transition-all ${draft.enabled ? 'bg-[#FAF6F0] border-2 border-amber-500/30 shadow-md' : 'bg-stone-100 opacity-60 border border-stone-200'}`}>
-          {/* Card Mockup Matching media_1790151522458.jpg */}
-          <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-r from-[#F6F0E4] via-[#FDFBF7] to-[#F1E9D7] border border-[#E8DEC8] p-3 sm:p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              {/* Left Side: Icon & Details */}
-              <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 flex-1">
-                {/* Megaphone Badge */}
-                <div className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-2xl bg-[#ECD7B5]/60 border border-[#DEBE92] text-[#8C5E28] shrink-0 shadow-xs">
-                  <Megaphone size={20} className="transform -rotate-12" />
-                </div>
+          {/* Field 1: Which Category + Discount % */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-[12px] font-bold text-[#2B342E]">
+                ১. কোন ক্যাটাগরির ওপর অফার?
+              </label>
+              <select
+                value={draft.targetCategory || 'c-coffee'}
+                onChange={(e) => setDraft({ ...draft, targetCategory: e.target.value })}
+                className="w-full rounded-xl border border-[#DFD8C8] bg-white px-3.5 py-2.5 text-[14px] font-medium text-[#1D2420] outline-none focus:border-[#113626]"
+              >
+                <option value="all">🍽️ All Items (সব খাবার)</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.emoji} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold tracking-wider text-[#A06C30] uppercase">
-                      {draft.tag || "Today's Special"}
-                    </span>
-                    {draft.discountPercent ? (
-                      <span className="rounded-full bg-[#E5A93C] text-white px-2 py-0.2 text-[9px] font-black">
-                        {draft.discountPercent}% OFF
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <h3 className="font-editorial text-[15px] sm:text-[18px] font-bold text-stone-900 leading-tight truncate">
-                    {draft.title || 'Enjoy 20% Off on Coffee'}
-                  </h3>
-
-                  <p className="text-[11px] sm:text-[12px] text-stone-600 line-clamp-1">
-                    {draft.subtitle || 'Because good vibes taste better with coffee!'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Right Side: Product Thumbnail + Dark Pill Button */}
-              <div className="flex items-center gap-2.5 shrink-0">
-                {/* Coffee Frappe Thumbnail */}
-                <div className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-2xl overflow-hidden bg-stone-900/10 border border-[#DEBE92]/50 shadow-inner">
-                  <img
-                    src={draft.image || '/brand/promo_coffee_offer.jpg'}
-                    alt="Offer Item"
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/brand/promo_coffee_offer.jpg';
+            <div>
+              <label className="mb-1.5 block text-[12px] font-bold text-[#2B342E]">
+                ২. কত শতাংশ ছাড় (Discount %)?
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {DISCOUNT_CHIPS.map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => {
+                      const nextTitle =
+                        pct > 0
+                          ? `Enjoy ${pct}% Off on ${
+                              categories.find((c) => c.id === draft.targetCategory)?.name || 'Menu'
+                            }`
+                          : draft.title;
+                      setDraft({
+                        ...draft,
+                        discountPercent: pct,
+                        title: nextTitle,
+                      });
                     }}
-                  />
-                </div>
-
-                {/* Dark View Menu Button */}
-                <button
-                  type="button"
-                  className="rounded-full bg-[#1A1816] hover:bg-stone-900 text-white px-3.5 sm:px-4 py-2 text-[11px] sm:text-[12px] font-semibold flex items-center gap-1 shadow-sm transition active:scale-95 cursor-default"
-                >
-                  <span>{draft.buttonText || 'View Menu →'}</span>
-                </button>
+                    className={`rounded-xl border px-3 py-2 text-[12.5px] font-bold transition cursor-pointer ${
+                      (draft.discountPercent || 0) === pct
+                        ? 'border-[#113626] bg-[#113626] text-white'
+                        : 'border-[#DFD8C8] bg-white text-[#2B342E] hover:border-[#113626]'
+                    }`}
+                  >
+                    {pct === 0 ? 'No %' : `${pct}%`}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* 3. One-Click Quick Presets */}
-      <div className="space-y-2">
-        <label className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
-          <Sparkles size={14} className="text-amber-500" />
-          Quick 1-Click Offer Templates
-        </label>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {PRESET_OFFERS.map((p, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleApplyPreset(p.data)}
-              className="text-left rounded-2xl border border-stone-200 bg-white p-3.5 hover:border-amber-500 hover:shadow-md transition active:scale-98 group cursor-pointer"
-            >
-              <div className="flex items-center gap-2 font-bold text-stone-900 text-xs group-hover:text-amber-700">
-                <span className="text-base">{p.icon}</span>
-                <span className="truncate">{p.name}</span>
-              </div>
-              <p className="text-[11px] text-stone-500 mt-1 line-clamp-1">{p.data.subtitle}</p>
-              <span className="mt-2 inline-block text-[10px] font-bold text-amber-600 group-hover:underline">
-                Apply Template &rarr;
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Settings Form */}
-      <div className="rounded-3xl border border-stone-200 bg-white p-5 sm:p-7 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+          {/* Field 2: Main Offer Title */}
           <div>
-            <h3 className="text-base font-bold text-stone-900">Offer Configuration</h3>
-            <p className="text-xs text-stone-500">Edit any details of the promotional card below.</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-stone-700">
-              {draft.enabled ? 'Banner Active' : 'Banner Disabled'}
-            </span>
-            <Toggle
-              on={draft.enabled}
-              onChange={(val) => setDraft({ ...draft, enabled: val })}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Offer Tag */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-              Offer Eyebrow / Tag
-            </label>
-            <input
-              type="text"
-              value={draft.tag}
-              onChange={(e) => setDraft({ ...draft, tag: e.target.value })}
-              placeholder="e.g. Today's Special, Weekend Deal, Monsoon Offer"
-              className={inputCx}
-            />
-            <p className="text-[10.5px] text-stone-400 mt-1">Small highlight tag at top-left of the card.</p>
-          </div>
-
-          {/* Headline Title */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-              Main Headline Title
+            <label className="mb-1.5 block text-[12px] font-bold text-[#2B342E]">
+              ৩. অফারের মূল লেখা (Headline)
             </label>
             <input
               type="text"
               value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-              placeholder="e.g. Enjoy 20% Off on Coffee"
-              className={inputCx}
+              placeholder="যেমন: Enjoy 20% Off on Coffee"
+              className="w-full rounded-xl border border-[#DFD8C8] bg-white px-3.5 py-2.5 text-[14px] font-medium text-[#1D2420] outline-none focus:border-[#113626]"
             />
-            <p className="text-[10.5px] text-stone-400 mt-1">Primary title shown in bold.</p>
           </div>
 
-          {/* Subtitle */}
+          {/* Field 3: Small Subtitle */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-              Subtitle / Description
+            <label className="mb-1.5 block text-[12px] font-bold text-[#2B342E]">
+              ৪. ছোট বিবরণ (Subtitle)
             </label>
             <input
               type="text"
               value={draft.subtitle}
               onChange={(e) => setDraft({ ...draft, subtitle: e.target.value })}
-              placeholder="e.g. Because good vibes taste better with coffee!"
-              className={inputCx}
+              placeholder="যেমন: Because good vibes taste better with coffee!"
+              className="w-full rounded-xl border border-[#DFD8C8] bg-white px-3.5 py-2.5 text-[14px] text-[#1D2420] outline-none focus:border-[#113626]"
             />
-            <p className="text-[10.5px] text-stone-400 mt-1">One-liner description encouraging the order.</p>
           </div>
 
-          {/* Button Text */}
+          {/* Field 4: Simple Photo Picker */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-              Button Action Text
+            <label className="mb-1.5 block text-[12px] font-bold text-[#2B342E]">
+              ৫. অফারের ছবি বেছে নিন (Choose Photo)
             </label>
-            <input
-              type="text"
-              value={draft.buttonText}
-              onChange={(e) => setDraft({ ...draft, buttonText: e.target.value })}
-              placeholder="e.g. View Menu →, Order Now, Claim Offer"
-              className={inputCx}
-            />
-            <p className="text-[10.5px] text-stone-400 mt-1">Text for the dark pill button.</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {PHOTO_OPTIONS.map((img, i) => {
+                const active = draft.image === img.url;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setDraft({ ...draft, image: img.url })}
+                    className={`group relative overflow-hidden rounded-xl border p-1 text-center transition cursor-pointer ${
+                      active
+                        ? 'border-[#113626] bg-[#EFF4EF] ring-2 ring-[#113626]/20'
+                        : 'border-[#DFD8C8] bg-white hover:border-[#113626]/40'
+                    }`}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.label}
+                      className="h-12 w-full rounded-lg object-cover"
+                    />
+                    <span className="mt-1 block truncate text-[10px] font-bold text-[#2B342E]">
+                      {img.label}
+                    </span>
+                    {active && (
+                      <span className="absolute top-1.5 right-1.5 grid h-4 w-4 place-items-center rounded-full bg-[#113626] text-white">
+                        <Check size={10} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Target Category */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-              Target Category to Open
-            </label>
-            <select
-              value={draft.targetCategory || 'c-coffee'}
-              onChange={(e) => setDraft({ ...draft, targetCategory: e.target.value })}
-              className={inputCx}
+          {/* Save Button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => saveOffer(draft)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#113626] px-6 py-3.5 text-[14px] font-bold text-white shadow-sm transition hover:bg-[#194B35] active:scale-[0.99] cursor-pointer"
             >
-              <option value="all">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.emoji} {c.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-[10.5px] text-stone-400 mt-1">
-              When customer clicks the button, it automatically filters the menu to this category.
-            </p>
+              {saved ? <CheckCircle2 size={18} /> : <Save size={18} />}
+              {saved ? 'Saved Successfully!' : 'Save Offer (অফার সেভ করুন)'}
+            </button>
           </div>
+        </div>
 
-          {/* Discount Percentage */}
+        {/* Right: Live Mobile Card Preview */}
+        <div className="flex flex-col justify-between rounded-[26px] border border-[#E4DEC9] bg-[#FAF8F4] p-5 shadow-2xs lg:col-span-5">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-              Discount Percentage (Optional)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={draft.discountPercent || ''}
-                onChange={(e) => setDraft({ ...draft, discountPercent: Number(e.target.value) || 0 })}
-                placeholder="e.g. 20"
-                className={inputCx}
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400 pointer-events-none">
-                %
+            <div className="mb-3 flex items-center justify-between border-b border-[#EAE4D7] pb-3">
+              <h3 className="font-editorial text-[17px] font-bold text-[#1D2420]">
+                Live Menu Preview
+              </h3>
+              <span className="rounded-full bg-[#E5F2E9] px-2.5 py-0.5 text-[11px] font-bold text-[#1B5E37]">
+                কাস্টমার যেভাবে দেখবে
               </span>
             </div>
-            <p className="text-[10.5px] text-stone-400 mt-1">Shows a badge e.g. "20% OFF". Leave 0 to hide.</p>
+
+            <p className="mb-4 text-[12.5px] text-[#6E6A61]">
+              কাস্টমারের ফোনের মেনুতে অফার কার্ডটি ঠিক নিচের মতো দেখাবে:
+            </p>
+
+            {/* Preview Mockup Box */}
+            <div
+              className={`rounded-3xl border p-4 transition ${
+                draft.enabled
+                  ? 'border-[#E5DEC9] bg-[#F5F2EB]'
+                  : 'border-dashed border-stone-300 bg-stone-100 opacity-60'
+              }`}
+            >
+              <div className="relative overflow-hidden rounded-[22px] border border-[#E8DEC8] bg-gradient-to-r from-[#F6F0E4] via-[#FDFBF7] to-[#F1E9D7] p-3.5 shadow-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-[#DEBE92] bg-[#ECD7B5]/60 text-[#8C5E28]">
+                      <Megaphone size={18} className="-rotate-12" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#A06C30]">
+                          {draft.tag || "Today's Special"}
+                        </span>
+                        {draft.discountPercent ? (
+                          <span className="rounded-full bg-[#D95B2B] px-2 py-0.5 text-[9px] font-black text-white">
+                            {draft.discountPercent}% OFF
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <h4 className="mt-0.5 truncate font-editorial text-[15px] font-bold text-[#1D2420]">
+                        {draft.title || 'Enjoy 20% Off on Coffee'}
+                      </h4>
+
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-[#5C635E]">
+                        {draft.subtitle || 'Because good vibes taste better with coffee!'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <img
+                      src={draft.image || '/brand/promo_coffee_offer.jpg'}
+                      alt="Offer"
+                      className="h-14 w-14 rounded-2xl border border-[#DEBE92]/50 object-cover"
+                    />
+                    <span className="rounded-full bg-[#113626] px-3 py-1 text-[10px] font-bold text-white">
+                      {draft.buttonText || 'View Menu →'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* 5. Image Selector */}
-        <div className="border-t border-stone-100 pt-5 space-y-3">
-          <label className="block text-xs font-bold uppercase tracking-wider text-stone-600">
-            Promotional Image
-          </label>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {PRESET_IMAGES.map((img, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setDraft({ ...draft, image: img.url })}
-                className={`relative flex items-center gap-2 p-2 rounded-xl border text-left transition active:scale-95 cursor-pointer ${
-                  draft.image === img.url
-                    ? 'border-amber-600 bg-amber-50/50 ring-2 ring-amber-500/20 shadow-xs'
-                    : 'border-stone-200 hover:border-stone-300 bg-stone-50'
-                }`}
-              >
-                <img
-                  src={img.url}
-                  alt={img.label}
-                  className="h-10 w-10 rounded-lg object-cover shrink-0"
-                />
-                <span className="text-[11px] font-semibold text-stone-800 line-clamp-1">
-                  {img.label}
-                </span>
-                {draft.image === img.url && (
-                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-600" />
-                )}
-              </button>
-            ))}
+          <div className="mt-6 rounded-2xl border border-[#DCE5DC] bg-[#EFF4EF] p-3.5 text-[12px] text-[#26302A]">
+            <p className="font-bold text-[#113626]">💡 কীভাবে কাজ করে?</p>
+            <ul className="mt-1.5 space-y-1 text-[#4A554E]">
+              <li>• উপরের যেকোনো <b>Ready Offer</b>-এ ক্লিক করলেই অফার সাথে সাথে চালু হয়ে যাবে।</li>
+              <li>• অথবা ডিসকাউন্ট `%` এবং নাম পাল্টে <b>Save Offer</b> বাটনে চাপুন।</li>
+              <li>• অফার বন্ধ রাখতে চাইলে উপরের <b>Turn Off Offer</b> বাটনে ক্লিক করুন।</li>
+            </ul>
           </div>
-
-          <div className="pt-2">
-            <label className="block text-[11px] font-semibold text-stone-500 mb-1">
-              Or Custom Image URL
-            </label>
-            <input
-              type="text"
-              value={draft.image}
-              onChange={(e) => setDraft({ ...draft, image: e.target.value })}
-              placeholder="e.g. /brand/promo_coffee_offer.jpg or https://..."
-              className={inputCx}
-            />
-          </div>
-        </div>
-
-        {/* Save CTA Row */}
-        <div className="flex items-center justify-end gap-3 border-t border-stone-100 pt-4">
-          <Button
-            variant="outline"
-            onClick={() => setDraft(currentOffer)}
-          >
-            Reset
-          </Button>
-
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-6 py-2.5"
-          >
-            {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Saved!' : 'Save & Publish Offer'}
-          </Button>
         </div>
       </div>
     </div>
   );
 }
+

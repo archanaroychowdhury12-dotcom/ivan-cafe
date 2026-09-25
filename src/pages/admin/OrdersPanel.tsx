@@ -26,24 +26,6 @@ import type { TabId } from './Admin';
 
 type FilterId = 'ACTIVE' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED' | 'ALL';
 
-interface DemoCall {
-  id: string;
-  tableCode: string;
-  reason: string;
-  ago: string;
-  note?: string;
-}
-
-const INITIAL_DEMO_CALLS: DemoCall[] = [
-  { id: 'dc-1', tableCode: 'T01', reason: 'Assistance', ago: '2 min ago' },
-  { id: 'dc-2', tableCode: 'T03', reason: 'Water refill', ago: '4 min ago' },
-  { id: 'dc-3', tableCode: 'T05', reason: 'Assistance', ago: '5 min ago' },
-  { id: 'dc-4', tableCode: 'T07', reason: 'Request bill', ago: '7 min ago' },
-  { id: 'dc-5', tableCode: 'T08', reason: 'Assistance', ago: '9 min ago' },
-  { id: 'dc-6', tableCode: 'T10', reason: 'Water refill', ago: '11 min ago' },
-  { id: 'dc-7', tableCode: 'T12', reason: 'Assistance', ago: '13 min ago' },
-];
-
 export default function OrdersPanel({
   onNavigateTab,
 }: {
@@ -58,7 +40,6 @@ export default function OrdersPanel({
   const [filter, setFilter] = useState<FilterId>('ACTIVE');
   const [q, setQ] = useState('');
   const [detail, setDetail] = useState<Order | null>(null);
-  const [dismissedDemoIds, setDismissedDemoIds] = useState<string[]>([]);
   const [showAllCalls, setShowAllCalls] = useState(false);
 
   const list = useMemo(() => {
@@ -81,34 +62,23 @@ export default function OrdersPanel({
     });
   }, [orders, filter, q]);
 
-  const liveOpenCalls = calls.filter((c) => !c.resolved);
-
-  // Merge live open calls with fallback demo calls so the staff-call bar looks and behaves just like the design
-  const combinedCalls = useMemo(() => {
-    if (liveOpenCalls.length > 0) {
-      return liveOpenCalls.map((c) => {
+  const liveOpenCalls = useMemo(() => {
+    return calls
+      .filter((c) => !c.resolved)
+      .map((c) => {
         const mins = Math.max(1, Math.round((Date.now() - c.createdAt) / 60000));
         return {
           id: c.id,
           tableCode: c.tableCode,
           reason: c.reason,
+          note: c.note,
           ago: `${mins} min ago`,
-          isLive: true,
         };
       });
-    }
-    return INITIAL_DEMO_CALLS.filter((d) => !dismissedDemoIds.includes(d.id)).map((d) => ({
-      ...d,
-      isLive: false,
-    }));
-  }, [liveOpenCalls, dismissedDemoIds]);
+  }, [calls]);
 
-  const handleResolveCall = (id: string, tableCode: string, isLive: boolean) => {
-    if (isLive) {
-      actions.resolveCall(id);
-    } else {
-      setDismissedDemoIds((prev) => [...prev, id]);
-    }
+  const handleResolveCall = (id: string, tableCode: string) => {
+    actions.resolveCall(id);
     toast(`Resolved request for table ${tableCode}`, 'success');
   };
 
@@ -125,11 +95,11 @@ export default function OrdersPanel({
     )
     .reduce((s, o) => s + o.total, 0);
 
-  const totalTables = Math.max(tables.length, 12);
+  const totalTables = tables.length;
   const occupiedTablesCount = new Set(
     active.filter((o) => o.diningMode !== 'Takeaway').map((o) => o.tableCode),
   ).size;
-  const occupancyPct = Math.round((occupiedTablesCount / totalTables) * 100);
+  const occupancyPct = totalTables > 0 ? Math.round((occupiedTablesCount / totalTables) * 100) : 0;
 
   return (
     <div className="space-y-5">
@@ -197,10 +167,10 @@ export default function OrdersPanel({
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-bold text-[#26302A]">Open Table Calls</p>
             <p className="mt-1 font-editorial text-[34px] font-bold leading-none text-[#142019]">
-              {combinedCalls.length}
+              {liveOpenCalls.length}
             </p>
             <p className="mt-2.5 text-[12px] font-medium text-[#66726A]">
-              {combinedCalls.length > 0 ? 'Need attention' : 'All tables settled'}
+              {liveOpenCalls.length > 0 ? 'Need attention' : 'All tables settled'}
             </p>
           </div>
           {/* Top-right soft alert bell circle */}
@@ -238,7 +208,7 @@ export default function OrdersPanel({
       </div>
 
       {/* -------------------- Guests Calling For Staff Banner ------------------- */}
-      {combinedCalls.length > 0 && (
+      {liveOpenCalls.length > 0 && (
         <div className="rounded-[26px] border border-[#F2CCB6] bg-gradient-to-b from-[#FDF3EB] to-[#FAF1E8] p-4 sm:p-5 shadow-2xs">
           {/* Banner Header */}
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -261,21 +231,23 @@ export default function OrdersPanel({
                 <span className="grid h-4 w-4 place-items-center rounded-full bg-[#FADDD0] text-[#D95B2B]">
                   <Bell size={10} />
                 </span>
-                {combinedCalls.length} pending
+                {liveOpenCalls.length} pending
               </span>
 
-              <button
-                onClick={() => setShowAllCalls((v) => !v)}
-                className="inline-flex items-center gap-1 text-[13px] font-bold text-[#26302A] transition hover:text-[#113626]"
-              >
-                {showAllCalls ? 'Show less' : 'View all'} <ArrowRight size={14} />
-              </button>
+              {liveOpenCalls.length > 7 && (
+                <button
+                  onClick={() => setShowAllCalls((v) => !v)}
+                  className="inline-flex items-center gap-1 text-[13px] font-bold text-[#26302A] transition hover:text-[#113626]"
+                >
+                  {showAllCalls ? 'Show less' : 'View all'} <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Table Call Cards Grid */}
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-            {(showAllCalls ? combinedCalls : combinedCalls.slice(0, 7)).map((c) => (
+            {(showAllCalls ? liveOpenCalls : liveOpenCalls.slice(0, 7)).map((c) => (
               <div
                 key={c.id}
                 className="flex flex-col justify-between rounded-[20px] border border-[#ECE3D5] bg-[#FAF8F4] p-3.5 shadow-2xs transition hover:border-[#DECBB6] hover:shadow-sm"
@@ -303,6 +275,9 @@ export default function OrdersPanel({
                   </div>
 
                   <p className="mt-2.5 text-[13px] font-medium text-[#2C3530]">{c.reason}</p>
+                  {c.note && (
+                    <p className="mt-0.5 truncate text-[11px] italic text-[#6E6A61]">“{c.note}”</p>
+                  )}
                   <p className="mt-0.5 text-[11px] text-[#878075]">{c.ago}</p>
                 </div>
 
@@ -314,7 +289,7 @@ export default function OrdersPanel({
                     <Phone size={10} /> Call
                   </button>
                   <button
-                    onClick={() => handleResolveCall(c.id, c.tableCode, c.isLive)}
+                    onClick={() => handleResolveCall(c.id, c.tableCode)}
                     className="inline-flex flex-1 items-center justify-center gap-1 rounded-full border border-[#DCE2DA] bg-[#F1F4F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#2B3630] transition hover:bg-[#E3E9E1]"
                   >
                     <Check size={11} /> Resolve

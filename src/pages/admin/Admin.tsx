@@ -153,7 +153,7 @@ export default function Admin() {
 
   const activeCount = orders.filter((o) => !['SERVED', 'CANCELLED'].includes(o.status)).length;
   const openCallsCount = calls.filter((c) => !c.resolved).length;
-  const badgeCount = openCallsCount > 0 ? openCallsCount : 3;
+  const badgeCount = openCallsCount;
 
   const formattedDate = now.toLocaleDateString('en-US', {
     month: 'short',
