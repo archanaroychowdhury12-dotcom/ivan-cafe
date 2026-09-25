@@ -6,6 +6,7 @@ import {
   ChefHat,
   ClipboardList,
   LogOut,
+  Megaphone,
   QrCode,
   Settings as SettingsIcon,
   UtensilsCrossed,
@@ -16,6 +17,7 @@ import AdminLogin from './AdminLogin';
 import OrdersPanel from './OrdersPanel';
 import MenuPanel from './MenuPanel';
 import TablesPanel from './TablesPanel';
+import OffersPanel from './OffersPanel';
 import AnalyticsPanel from './AnalyticsPanel';
 import SettingsPanel from './SettingsPanel';
 import { Mark } from '../../components/Brand';
@@ -24,6 +26,7 @@ const TABS = [
   { id: 'orders', label: 'Live orders', icon: ClipboardList },
   { id: 'menu', label: 'Menu', icon: UtensilsCrossed },
   { id: 'tables', label: 'Tables & QR', icon: QrCode },
+  { id: 'offers', label: 'Special Offers', icon: Megaphone },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ] as const;
@@ -135,6 +138,7 @@ export default function Admin() {
           {tab === 'orders' && <OrdersPanel />}
           {tab === 'menu' && <MenuPanel />}
           {tab === 'tables' && <TablesPanel />}
+          {tab === 'offers' && <OffersPanel />}
           {tab === 'analytics' && <AnalyticsPanel />}
           {tab === 'settings' && <SettingsPanel />}
         </motion.main>
@@ -154,7 +158,7 @@ export default function Admin() {
               }`}
             >
               <Icon size={19} />
-              {t.label.split(' ')[0]}
+              {t.id === 'offers' ? 'Offers' : t.label.split(' ')[0]}
               {t.id === 'orders' && activeCount > 0 && (
                 <span className="absolute right-1/4 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 text-[9px] text-white">
                   {activeCount}

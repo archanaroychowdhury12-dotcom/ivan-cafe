@@ -11,7 +11,7 @@ import type {
   Settings,
   StaffCall,
 } from './types';
-import { seedDB } from './seed';
+import { defaultPromoOffer, seedDB } from './seed';
 import { orderCode, uid } from './format';
 import {
   isSupabaseConfigured,
@@ -116,6 +116,14 @@ function load(): DB {
       if (parsed.settings) {
         fresh.settings = { ...fresh.settings, ...parsed.settings };
       }
+      if (!fresh.settings.offer) {
+        try {
+          const storedOffer = typeof localStorage !== 'undefined' ? localStorage.getItem('ivan_cafe_offer') : null;
+          fresh.settings.offer = storedOffer ? JSON.parse(storedOffer) : defaultPromoOffer;
+        } catch {
+          fresh.settings.offer = defaultPromoOffer;
+        }
+      }
       localStorage.setItem(KEY, JSON.stringify(fresh));
       return fresh;
     }
@@ -123,6 +131,17 @@ function load(): DB {
     parsed.orders = existingOrders;
     parsed.calls = existingCalls;
     parsed.version = CURRENT_VERSION;
+    if (!parsed.settings) {
+      parsed.settings = seedDB().settings;
+    }
+    if (!parsed.settings.offer) {
+      try {
+        const storedOffer = typeof localStorage !== 'undefined' ? localStorage.getItem('ivan_cafe_offer') : null;
+        parsed.settings.offer = storedOffer ? JSON.parse(storedOffer) : defaultPromoOffer;
+      } catch {
+        parsed.settings.offer = defaultPromoOffer;
+      }
+    }
     return parsed;
   } catch {
     return seedDB();
@@ -833,6 +852,12 @@ export const actions = {
     mutate((d) => {
       d.settings = { ...d.settings, ...patch };
     });
+
+    if (patch.offer) {
+      try {
+        localStorage.setItem('ivan_cafe_offer', JSON.stringify(patch.offer));
+      } catch {}
+    }
 
     if (supabase) {
       supabase

@@ -1,4 +1,15 @@
-import type { AddonGroup, CafeTable, Category, DB, MenuItem } from './types';
+import type { AddonGroup, CafeTable, Category, DB, MenuItem, PromoOffer } from './types';
+
+export const defaultPromoOffer: PromoOffer = {
+  enabled: true,
+  tag: "Today's Special",
+  title: 'Enjoy 20% Off on Coffee',
+  subtitle: 'Because good vibes taste better with coffee!',
+  buttonText: 'View Menu →',
+  image: '/brand/promo_coffee_offer.jpg',
+  targetCategory: 'c-coffee',
+  discountPercent: 20,
+};
 
 // Default admin credentials -> user: admin / pass: ivan2026
 // (sha256 of "ivan2026"); changeable from Admin › Settings.
@@ -191,6 +202,7 @@ export function seedDB(): DB {
       adminPass: 'ivan2026',
       adminPassHash: DEFAULT_PASS_HASH,
       customDomain: 'https://ivan-caffe.vercel.app',
+      offer: defaultPromoOffer,
     },
     categories: seedCategories,
     items: seedItems,

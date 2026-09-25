@@ -14,10 +14,12 @@ import {
   GlassWater,
   LayoutGrid,
   Leaf,
+  Megaphone,
   Menu as MenuIcon,
   Rows3,
   Search,
   ShoppingBag,
+  SlidersHorizontal,
   Soup,
   Sparkles,
   Utensils,
@@ -27,7 +29,8 @@ import {
 import { useCart, cart } from '../lib/cart';
 import { actions, useCategories, useItems, useOrders, useSettings, useTables } from '../lib/store';
 import { money } from '../lib/format';
-import type { CallReason, Category, MenuItem } from '../lib/types';
+import type { CallReason, Category, MenuItem, PromoOffer } from '../lib/types';
+import { defaultPromoOffer } from '../lib/seed';
 import { ItemCard, KitchenDisplayCard } from '../components/customer/ItemCard';
 import { ItemSheet } from '../components/customer/ItemSheet';
 import { BottomNav } from '../components/customer/BottomNav';
@@ -335,106 +338,110 @@ export default function MenuPage() {
     }
   };
 
+  const offerData: PromoOffer = settings.offer || defaultPromoOffer;
+  const popularSpotlight = useMemo(() => {
+    const pop = items.filter((i) => !i.soldOut && (i.popular || i.categoryId === 'c-coffee' || i.categoryId === 'c-chicken-snacks'));
+    return pop.slice(0, 6);
+  }, [items]);
+
   return (
     <div className="mx-auto min-h-dvh max-w-md bg-[#FAF6F0] text-stone-900 pb-28 relative selection:bg-amber-600 selection:text-white font-sans antialiased">
       {/* ---------------------------------------------------- */}
-      {/* 1. HERO HEADER AREA                                  */}
+      {/* 1. HERO HEADER AREA (MATCHES REFERENCE SCREENSHOT)   */}
       {/* ---------------------------------------------------- */}
-      {/* ---------------------------------------------------- */}
-      {/* 1. HERO HEADER AREA                                  */}
-      {/* ---------------------------------------------------- */}
-      <header className="relative bg-[#17110D] text-white pt-5 pb-10 px-4 sm:px-5 overflow-hidden">
-        {/* Background ambient lighting and textures */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#3d281a_0%,#17110d_70%)] opacity-90 pointer-events-none" />
-        <div className="absolute -top-16 -right-16 h-72 w-72 rounded-full bg-amber-600/15 blur-3xl pointer-events-none" />
+      <header className="relative bg-[#17110D] text-white pt-4 pb-10 px-4 sm:px-5 overflow-hidden">
+        {/* Warm ambient bistro lighting */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#3d281a_0%,#17110d_70%)] opacity-95 pointer-events-none" />
+        <div className="absolute -top-16 -right-16 h-72 w-72 rounded-full bg-amber-600/20 blur-3xl pointer-events-none" />
 
-        {/* Top bar: Hamburger, Clean Brand Center, Call Staff & Table selector Right */}
-        <div className="relative z-10 flex items-center justify-between gap-2.5">
-          {/* Hamburger Menu Button */}
+        {/* Top bar: Circular Cup Logo + Brand Left, Table Pill & Bell Notification Right */}
+        <div className="relative z-10 flex items-center justify-between gap-2">
+          {/* Left: Circular Cup Logo + IVAN FOOD COURT */}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 hover:bg-white/20 text-white/95 backdrop-blur-md transition active:scale-95 cursor-pointer"
-            aria-label="Open menu options"
+            className="flex items-center gap-2.5 text-left min-w-0 group cursor-pointer"
           >
-            <MenuIcon size={20} strokeWidth={2.2} />
+            <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2B1D14] to-[#120C08] border-2 border-[#E5B869] shadow-lg shadow-black/50">
+              <Coffee size={20} className="text-[#E5B869]" strokeWidth={2.2} />
+              <span className="absolute -inset-0.5 rounded-full border border-[#E5B869]/30 pointer-events-none" />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-editorial text-[20px] sm:text-[22px] font-bold tracking-[0.08em] text-white leading-none">
+                  IVAN
+                </span>
+              </div>
+              <p className="text-[9.5px] font-bold tracking-[0.2em] text-stone-200 uppercase leading-tight mt-0.5">
+                FOOD COURT
+              </p>
+              <p className="text-[7.5px] font-extrabold tracking-[0.18em] text-[#E5B869] uppercase mt-0.5 opacity-95">
+                GOOD FOOD &bull; GOOD MOOD
+              </p>
+            </div>
           </button>
 
-          {/* Center Brand Title - Clean, Elegant, Luxury Branding */}
-          <div className="text-center min-w-0 flex-1 px-1">
-            <h1 className="font-editorial text-[17px] sm:text-[19px] font-bold tracking-[0.18em] text-[#FFFDF9] uppercase drop-shadow-sm leading-tight truncate">
-              IVAN FOOD COURT
-            </h1>
-            <p className="text-[8.5px] font-bold tracking-[0.24em] text-[#E5B869] uppercase mt-0.5 opacity-90">
-              — GOOD FOOD · GOOD MOOD —
-            </p>
-          </div>
-
-          {/* Right Action Area: Glowing Call Staff + Table Selector */}
+          {/* Right: Table T01 / QR Scan Active Pill + Notification Bell (3) */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Call Staff Button: Compact, Glowing, Non-overlapping */}
+            <button
+              type="button"
+              onClick={() => setTableModalOpen(true)}
+              className="flex items-center gap-2 rounded-full px-3 py-1.5 bg-black/45 hover:bg-black/65 backdrop-blur-md border border-white/20 text-white shadow-md transition active:scale-95 text-left cursor-pointer"
+            >
+              <div className="grid h-6 w-6 place-items-center rounded-full bg-white/10 text-emerald-400 shrink-0">
+                <UtensilsCrossed size={12} />
+              </div>
+              <div className="text-left pr-0.5">
+                <div className="flex items-center gap-1 text-[11px] font-bold leading-tight text-white">
+                  <span>{diningMode === 'Takeaway' ? 'Takeaway' : `Table ${table.code}`}</span>
+                  <ChevronDown size={11} className="opacity-75" />
+                </div>
+                <div className="flex items-center gap-1 text-[8.5px] font-semibold text-emerald-400 leading-none mt-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{diningMode === 'Takeaway' ? 'Parcel Active' : 'QR Scan Active'}</span>
+                </div>
+              </div>
+            </button>
+
+            {/* Notification Bell with Red Badge */}
             <button
               type="button"
               onClick={() => {
                 handleCallStaff('Assistance');
                 setCallOpen(true);
               }}
-              className="h-10 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/25 to-amber-600/25 hover:from-amber-500/35 hover:to-amber-600/35 border border-amber-400/50 text-amber-300 flex items-center gap-1.5 transition active:scale-95 shadow-sm cursor-pointer"
-              title="Call staff / waiter to your table"
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/45 hover:bg-black/65 border border-white/20 text-white backdrop-blur-md transition active:scale-95 cursor-pointer shadow-md"
+              title="Call Staff / Waiter"
+              aria-label="Call waiter or notifications"
             >
-              <BellRing size={16} className="text-amber-300 fill-amber-300/30 animate-pulse shrink-0" />
-              <span className="text-[11px] font-bold tracking-wide uppercase hidden xs:inline">Staff</span>
-            </button>
-
-            {/* Table Selection / Dining Mode Badge */}
-            <button
-              type="button"
-              onClick={() => setTableModalOpen(true)}
-              className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 backdrop-blur-md transition active:scale-95 text-left shadow-sm border cursor-pointer ${
-                diningMode === 'Takeaway'
-                  ? 'bg-amber-600/30 hover:bg-amber-600/40 border-amber-400/40 text-amber-200'
-                  : 'bg-white/10 hover:bg-white/15 border-white/20 text-white'
-              }`}
-            >
-              <div className="text-right">
-                <p className="text-[11.5px] font-bold leading-none flex items-center gap-1">
-                  {diningMode === 'Takeaway' ? '🛍️ Takeaway' : `🍽️ ${table.code}`}
-                  <ChevronDown size={11} className="opacity-70" />
-                </p>
-                <p className="text-[8.5px] text-[#E5B869] font-bold uppercase tracking-wider mt-0.5">
-                  {diningMode === 'Takeaway' ? 'Parcel' : 'Dine-in'}
-                </p>
-              </div>
+              <BellRing size={17} className="text-amber-200" />
+              <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white shadow-xs">
+                3
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Hero Banner: Luxury Cinematic Coffee Scene */}
-        <div className="relative z-10 mt-5 rounded-[26px] overflow-hidden shadow-2xl border border-white/10 bg-[#17110D]">
+        {/* Hero Banner: Freshly Made / Delicious Food 🌿 */}
+        <div className="relative z-10 mt-4 rounded-[26px] overflow-hidden shadow-2xl border border-white/15 bg-[#17110D]">
           <div
-            className="relative w-full min-h-[175px] sm:min-h-[195px] bg-cover bg-right flex items-center px-5 sm:px-6 py-4"
+            className="relative w-full min-h-[170px] sm:min-h-[188px] bg-cover bg-right flex items-center px-5 sm:px-6 py-4"
             style={{ backgroundImage: `url('/brand/hero_coffee_banner.jpg')` }}
           >
-            {/* Dark gradient overlay for ultra-crisp readable typography */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#17110D] via-[#17110D]/80 to-transparent sm:via-[#17110D]/65 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#17110D] via-[#17110D]/80 to-transparent sm:via-[#17110D]/60 pointer-events-none" />
 
-            {/* Left Cursive Typography */}
-            <div className="relative z-10 max-w-[210px] sm:max-w-[250px] space-y-1">
-              <span className="text-[#E5B869] text-xs font-bold tracking-widest block opacity-90 select-none">✦ ✦</span>
+            <div className="relative z-10 max-w-[235px] sm:max-w-[265px] space-y-1">
+              <p className="font-hand text-[24px] sm:text-[27px] font-bold text-[#E5B869] leading-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] select-none">
+                Freshly Made
+              </p>
 
-              <h2 className="font-hand leading-[1.0] text-left">
-                <span className="block text-[36px] sm:text-[42px] font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                  Good Food
-                </span>
-                <span className="block text-[40px] sm:text-[46px] font-extrabold text-[#E5B869] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] -mt-1">
-                  Good Mood
-                </span>
+              <h2 className="font-editorial text-[30px] sm:text-[34px] font-bold text-white leading-[1.08] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                Delicious Food <span className="text-[22px] inline-block align-middle">🌿</span>
               </h2>
 
-              <span className="text-[#E5B869] text-xs font-bold tracking-widest block opacity-90 select-none">✦ ✦</span>
-
-              <p className="text-[11px] sm:text-[12px] font-medium text-stone-200 pt-0.5 tracking-wide leading-tight drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
-                Fresh food &bull; Great coffee &bull; Cozy vibes
+              <p className="text-[11px] sm:text-[11.5px] font-medium text-stone-200 pt-1 tracking-wide leading-tight drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                Coffee &bull; Snacks &bull; Meals &bull; Beverages
               </p>
             </div>
           </div>
@@ -444,214 +451,136 @@ export default function MenuPage() {
       {/* ---------------------------------------------------- */}
       {/* 2. MAIN CURVED SHEET CONTAINER                       */}
       {/* ---------------------------------------------------- */}
-      <div className="relative -mt-6 rounded-t-[34px] bg-[#FAF6F0] px-4 pt-4 pb-6 border-t border-[#EADECE]/80 shadow-2xl">
+      <div className="relative -mt-6 rounded-t-[32px] bg-[#FAF6F0] px-4 pt-4 pb-6 border-t border-[#EADECE]/90 shadow-2xl">
         {/* ---------------------------------------------------- */}
-        {/* PROMINENT DINING MODE SWITCHER: DINE-IN vs TAKEAWAY  */}
+        {/* DYNAMIC SPECIAL OFFER BANNER (ADMIN CONFIGURABLE)    */}
         {/* ---------------------------------------------------- */}
-        <div className="mb-3.5 overflow-hidden rounded-[24px] border border-[#E7DCCE] bg-white p-2 shadow-sm">
-          <div className="grid grid-cols-2 gap-2">
-            {/* Dine-In Tab */}
-            <button
-              type="button"
-              onClick={() => switchDiningMode('Dine-in')}
-              className={`relative flex items-center justify-center gap-2 rounded-2xl py-3 px-3 transition-all cursor-pointer ${
-                diningMode === 'Dine-in'
-                  ? 'bg-gradient-to-br from-[#18392B] to-[#0F261D] text-white shadow-md shadow-emerald-950/20 ring-1 ring-emerald-700/50'
-                  : 'bg-[#F9F6F0] text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200/60'
-              }`}
-            >
-              <div className={`grid h-8 w-8 place-items-center rounded-xl shrink-0 ${
-                diningMode === 'Dine-in' ? 'bg-white/15 text-amber-300' : 'bg-white text-stone-500 shadow-2xs'
-              }`}>
-                <UtensilsCrossed size={16} strokeWidth={2.5} />
-              </div>
-              <div className="text-left min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13.5px] font-black leading-tight">Dine-in</span>
-                  <span className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-extrabold ${
-                    diningMode === 'Dine-in' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-stone-200 text-stone-600'
-                  }`}>
-                    {table.code}
-                  </span>
+        {offerData.enabled !== false && (
+          <div className="mb-4">
+            <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-r from-[#F5EFE2] via-[#FDFBF7] to-[#EFE5D2] border border-[#E6D7C0] p-3 sm:p-3.5 shadow-[0_4px_16px_rgba(140,94,40,0.09)]">
+              <div className="flex items-center justify-between gap-2.5">
+                {/* Left Side: Megaphone Badge + Offer Texts */}
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-2xl bg-[#ECD7B5]/70 border border-[#DEBE92] text-[#8C5E28] shrink-0 shadow-2xs">
+                    <Megaphone size={19} className="transform -rotate-12" />
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-extrabold tracking-wider text-[#9A652A] uppercase">
+                        {offerData.tag || "Today's Special"}
+                      </span>
+                      {offerData.discountPercent ? (
+                        <span className="rounded-full bg-[#E5A93C] text-white px-1.5 py-0.2 text-[8.5px] font-black">
+                          {offerData.discountPercent}% OFF
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <h3 className="font-editorial text-[14.5px] sm:text-[16px] font-bold text-stone-900 leading-tight truncate">
+                      {offerData.title || 'Enjoy 20% Off on Coffee'}
+                    </h3>
+
+                    <p className="text-[10.5px] text-stone-600 line-clamp-1 leading-snug">
+                      {offerData.subtitle || 'Because good vibes taste better with coffee!'}
+                    </p>
+                  </div>
                 </div>
-                <p className={`text-[10px] font-medium leading-none mt-0.5 truncate ${
-                  diningMode === 'Dine-in' ? 'text-emerald-100/80' : 'text-stone-500'
-                }`}>
-                  Eat at table
-                </p>
-              </div>
-            </button>
 
-            {/* Takeaway Tab */}
-            <button
-              type="button"
-              onClick={() => switchDiningMode('Takeaway')}
-              className={`relative flex items-center justify-center gap-2 rounded-2xl py-3 px-3 transition-all cursor-pointer ${
-                diningMode === 'Takeaway'
-                  ? 'bg-gradient-to-br from-[#C2571F] to-[#9C3F10] text-white shadow-md shadow-orange-950/20 ring-1 ring-orange-600/50'
-                  : 'bg-[#F9F6F0] text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200/60'
-              }`}
-            >
-              <div className={`grid h-8 w-8 place-items-center rounded-xl shrink-0 ${
-                diningMode === 'Takeaway' ? 'bg-white/20 text-white' : 'bg-white text-stone-500 shadow-2xs'
-              }`}>
-                <ShoppingBag size={16} strokeWidth={2.5} />
-              </div>
-              <div className="text-left min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13.5px] font-black leading-tight">Takeaway</span>
-                  <span className={`rounded-full px-1.5 py-0.2 text-[9.5px] font-extrabold ${
-                    diningMode === 'Takeaway' ? 'bg-white/25 text-white' : 'bg-orange-100 text-orange-800'
-                  }`}>
-                    Parcel 🛍️
-                  </span>
+                {/* Right Side: Frappe Image + Dark Pill Button */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative h-13 w-13 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-stone-900/10 border border-[#DEBE92]/60 shadow-xs">
+                    <img
+                      src={offerData.image || '/brand/promo_coffee_offer.jpg'}
+                      alt={offerData.title}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/brand/promo_coffee_offer.jpg';
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = offerData.targetCategory || 'c-coffee';
+                      setActiveCat(target);
+                      const el = document.getElementById('dishes-section');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="rounded-full bg-[#1A1816] hover:bg-stone-900 text-white px-3 sm:px-3.5 py-2 text-[10.5px] sm:text-[11px] font-semibold flex items-center gap-1 shadow-sm transition active:scale-95 cursor-pointer whitespace-nowrap"
+                  >
+                    <span>{offerData.buttonText || 'View Menu →'}</span>
+                  </button>
                 </div>
-                <p className={`text-[10px] font-medium leading-none mt-0.5 truncate ${
-                  diningMode === 'Takeaway' ? 'text-amber-100/90' : 'text-stone-500'
-                }`}>
-                  Pack & carry
-                </p>
-              </div>
-            </button>
-          </div>
-
-          {/* Context Helper Line */}
-          <div className="mt-2 flex items-center justify-between border-t border-[#F0E6D8] pt-2 px-1 text-[11px]">
-            {diningMode === 'Dine-in' ? (
-              <>
-                <span className="flex items-center gap-1.5 text-emerald-800 font-semibold">
-                  <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
-                  Serving fresh at <strong className="text-emerald-950">Table {table.code}</strong> ({table.label || 'Main Hall'})
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setTableModalOpen(true)}
-                  className="rounded-lg bg-stone-100 hover:bg-stone-200 px-2 py-0.5 text-[10.5px] font-bold text-stone-700 transition"
-                >
-                  Change Table
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="flex items-center gap-1.5 text-orange-800 font-semibold">
-                  <span className="h-2 w-2 rounded-full bg-orange-600 animate-pulse" />
-                  <strong className="text-orange-950">Takeaway / Parcel</strong> · Packed fresh to take home or office
-                </span>
-                <span className="rounded-lg bg-orange-100 px-2 py-0.5 text-[10.5px] font-extrabold text-orange-900">
-                  Counter Collect
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Top Call Staff Bar - Extra Large & Prominent */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => {
-              handleCallStaff('Assistance');
-              setCallOpen(true);
-            }}
-            className="w-full flex items-center justify-between rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border-2 border-amber-500/40 p-3 text-amber-950 shadow-sm transition active:scale-[0.98] cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500 text-stone-950 shadow-md shadow-amber-500/30 shrink-0">
-                <BellRing size={20} className="animate-pulse" />
-              </div>
-              <div className="text-left">
-                <p className="text-[14px] font-black leading-tight text-stone-900">
-                  Need Staff? Call Waiter
-                </p>
-                <p className="text-[11px] font-medium text-stone-600 mt-0.5">
-                  Water, cutlery, assistance or request bill
-                </p>
               </div>
             </div>
+          </div>
+        )}
 
-            <span className="rounded-xl bg-white px-3 py-1.5 text-[11.5px] font-bold text-amber-900 border border-amber-200/80 shadow-xs shrink-0">
-              Table {table.code}
-            </span>
+        {/* Search Bar + Filter Button (Matches Reference Design) */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for food, drinks, or desserts..."
+              className="w-full rounded-full bg-white border border-[#E7DCCE] py-3 pl-11 pr-9 text-[13px] text-stone-900 shadow-xs placeholder:text-stone-400 outline-none transition focus:border-[#143E35] focus:ring-2 focus:ring-[#143E35]/10"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-3 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full bg-stone-100 text-stone-500 hover:text-stone-900"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleSetViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white border border-[#E7DCCE] text-stone-700 hover:text-stone-950 shadow-xs transition active:scale-95 cursor-pointer"
+            title="Toggle Grid / List View"
+            aria-label="Filter and view options"
+          >
+            <SlidersHorizontal size={16} />
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for food, drinks, or desserts..."
-            className="w-full rounded-full bg-white border border-[#E7DCCE] py-3.5 pl-11 pr-10 text-[13.5px] text-stone-900 shadow-sm placeholder:text-stone-400 outline-none transition focus:border-emerald-800 focus:ring-2 focus:ring-emerald-800/10"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              className="absolute right-3.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full bg-stone-100 text-stone-500 hover:text-stone-900"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-
         {/* ---------------------------------------------------- */}
-        {/* 3. CATEGORY GRID (SQUIRCLE CARDS - NO HORIZONTAL SCROLL) */}
+        {/* 3. CATEGORY PILLS CAROUSEL (MATCHES SCREENSHOT)      */}
         {/* ---------------------------------------------------- */}
-        <div className="mt-4 grid grid-cols-4 gap-2.5">
+        <div className="mt-4 flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
           {/* ALL Category Card */}
           <button
             type="button"
             onClick={() => setActiveCat('all')}
-            className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
+            className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 h-[78px] min-w-[68px] shrink-0 transition-all duration-200 active:scale-95 cursor-pointer ${
               activeCat === 'all'
-                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/25 ring-1 ring-[#123826]'
-                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
+                ? 'bg-[#143E35] text-white shadow-md shadow-[#143E35]/25 ring-1 ring-[#143E35]'
+                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
+            <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
               <Coffee
-                size={24}
+                size={22}
                 strokeWidth={2.2}
-                className={activeCat === 'all' ? 'text-white' : 'text-[#123826]'}
+                className={activeCat === 'all' ? 'text-white' : 'text-[#143E35]'}
               />
             </div>
             <span
-              className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+              className={`mt-1 text-[11px] font-bold text-center leading-tight tracking-tight ${
                 activeCat === 'all' ? 'text-white font-extrabold' : 'text-stone-800'
               }`}
             >
               All
-            </span>
-          </button>
-
-          {/* Top Rated Category Card */}
-          <button
-            type="button"
-            onClick={() => setActiveCat('top-rated')}
-            className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
-              activeCat === 'top-rated'
-                ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/25 ring-1 ring-[#123826]'
-                : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
-            }`}
-          >
-            <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
-              <Sparkles
-                size={24}
-                strokeWidth={2.2}
-                className={activeCat === 'top-rated' ? 'text-white' : 'text-amber-500'}
-              />
-            </div>
-            <span
-              className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
-                activeCat === 'top-rated' ? 'text-white font-extrabold' : 'text-stone-800'
-              }`}
-            >
-              Top Rated
             </span>
           </button>
 
@@ -664,17 +593,17 @@ export default function MenuPage() {
                 key={c.id}
                 type="button"
                 onClick={() => setActiveCat(c.id)}
-                className={`group relative flex flex-col items-center justify-center rounded-[22px] p-2 h-[82px] w-full transition-all duration-200 active:scale-95 cursor-pointer ${
+                className={`group relative flex flex-col items-center justify-center rounded-[20px] p-2 h-[78px] min-w-[68px] shrink-0 transition-all duration-200 active:scale-95 cursor-pointer ${
                   isActive
-                    ? 'bg-[#123826] text-white shadow-md shadow-[#123826]/25 ring-1 ring-[#123826]'
-                    : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5] hover:border-stone-300 hover:shadow-sm'
+                    ? 'bg-[#143E35] text-white shadow-md shadow-[#143E35]/25 ring-1 ring-[#143E35]'
+                    : 'bg-white text-stone-800 border border-[#EDE8DF] shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-[#FAF8F5]'
                 }`}
               >
-                <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-110">
+                <div className="flex h-8 w-8 items-center justify-center transition-transform group-hover:scale-110">
                   {renderCategoryIcon(c, isActive)}
                 </div>
                 <span
-                  className={`mt-1 text-[11.5px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
+                  className={`mt-1 text-[11px] font-bold text-center leading-tight tracking-tight line-clamp-1 ${
                     isActive ? 'text-white font-extrabold' : 'text-stone-800'
                   }`}
                 >
@@ -685,10 +614,94 @@ export default function MenuPage() {
           })}
         </div>
 
+        {/* Compact Dining Mode & Waiter Assist Bar */}
+        <div className="mt-3.5 flex items-center justify-between gap-2 rounded-2xl bg-white/80 border border-[#E7DCCE] px-3 py-2 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => switchDiningMode('Dine-in')}
+              className={`rounded-xl px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
+                diningMode === 'Dine-in'
+                  ? 'bg-[#143E35] text-white shadow-2xs'
+                  : 'text-stone-600 hover:bg-stone-100'
+              }`}
+            >
+              🍽️ Dine-in ({table.code})
+            </button>
+            <button
+              type="button"
+              onClick={() => switchDiningMode('Takeaway')}
+              className={`rounded-xl px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
+                diningMode === 'Takeaway'
+                  ? 'bg-[#C2571F] text-white shadow-2xs'
+                  : 'text-stone-600 hover:bg-stone-100'
+              }`}
+            >
+              🛍️ Takeaway
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              handleCallStaff('Assistance');
+              setCallOpen(true);
+            }}
+            className="flex items-center gap-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2.5 py-1 text-[11px] font-bold text-amber-900 transition cursor-pointer"
+          >
+            <BellRing size={12} className="text-amber-600 animate-pulse" />
+            <span>Call Waiter</span>
+          </button>
+        </div>
+
         {/* ---------------------------------------------------- */}
-        {/* 4. DISH SECTIONS                                     */}
+        {/* 4. POPULAR ITEMS SPOTLIGHT & DISH SECTIONS           */}
         {/* ---------------------------------------------------- */}
-        <div className="mt-5 space-y-8">
+        <div id="dishes-section" className="mt-5 space-y-7">
+          {/* Popular Items Section (When on All tab & no search query) */}
+          {activeCat === 'all' && !query && popularSpotlight.length > 0 && (
+            <section className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl leading-none">🔥</span>
+                  <div>
+                    <h2 className="font-editorial text-[20px] font-bold text-stone-900 tracking-tight leading-none">
+                      Popular Items
+                    </h2>
+                    <p className="text-[11.5px] font-medium text-stone-500 mt-0.5">
+                      Our most loved dishes, just for you!
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveCat('top-rated')}
+                  className="rounded-full bg-[#EFE8DC] hover:bg-[#E5DEC9] px-3.5 py-1.5 text-[11px] font-bold text-[#785C3D] flex items-center gap-1 transition active:scale-95 cursor-pointer"
+                >
+                  <span>View All</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+                {popularSpotlight.map((item, idx) => (
+                  <ItemCard
+                    key={`pop-${item.id}`}
+                    item={item}
+                    index={idx}
+                    layout="grid"
+                    inCart={qtyOf(item.id)}
+                    onOpen={() => setSheetItem(item)}
+                    onDirectAdd={(qty) => handleDirectAdd(item, qty)}
+                    onDirectRemove={() => handleDirectRemove(item)}
+                    ratingStats={ratingsMap.get(item.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {grouped.length === 0 && (
             <div className="py-12">
               <EmptyState

@@ -95,20 +95,24 @@ export function ItemCard({
 
           {/* Badges on Top-Left */}
           {item.soldOut ? (
-            <span className="absolute left-1.5 top-1.5 rounded-full bg-stone-900/90 px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-wider text-white shadow-xs">
+            <span className="absolute left-2 top-2 rounded-full bg-stone-900/90 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-xs">
               Sold Out
             </span>
-          ) : ratingStats && ratingStats.averageRating >= 4.8 && ratingStats.totalReviews >= 15 ? (
-            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-700 px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
-              <Star size={8} className="fill-amber-300 text-amber-300" /> MOST LOVED
+          ) : (ratingStats && ratingStats.averageRating >= 4.8) || index === 0 ? (
+            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#143E35] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+              👑 Most Loved
             </span>
-          ) : isPopular ? (
-            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#E5A93C] px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
-              <Star size={8} className="fill-white text-white" /> POPULAR
+          ) : isPopular || index === 1 ? (
+            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#D97706] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+              🔥 Popular
             </span>
-          ) : isNew ? (
-            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#0D9488] px-2 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-white shadow-xs">
-              NEW
+          ) : index === 2 ? (
+            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#B45309] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+              ⭐ Trending
+            </span>
+          ) : isNew || index === 3 ? (
+            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#15803D] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+              🌱 New
             </span>
           ) : null}
 
@@ -119,19 +123,19 @@ export function ItemCard({
               e.stopPropagation();
               setLiked(!liked);
             }}
-            className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/30 backdrop-blur-xs text-white hover:text-rose-400 transition-colors active:scale-90"
+            className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/25 backdrop-blur-xs text-white hover:text-rose-400 transition-colors active:scale-90"
             aria-label="Add to favorites"
           >
             <Heart
-              size={13}
+              size={14}
               className={liked ? 'fill-rose-500 text-rose-500' : 'text-white'}
             />
           </button>
 
-          {/* Bottom badge: Veg / Prep time */}
-          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-md bg-black/40 backdrop-blur-xs px-1.5 py-0.5 text-[9px] text-white font-medium">
-            <span className={`inline-block h-2 w-2 rounded-full ${item.veg ? 'bg-emerald-400' : 'bg-red-400'}`} />
-            <span>{item.prepMins}m</span>
+          {/* Bottom badge: Prep time */}
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-md px-2 py-0.5 text-[9.5px] text-white font-semibold">
+            <Clock size={10} className="text-white/80" />
+            <span>{item.prepMins || 5} min</span>
           </div>
 
           {item.soldOut && (
@@ -177,8 +181,8 @@ export function ItemCard({
           </div>
 
           {/* Price and Action Row */}
-          <div className="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between gap-1">
-            <span className="font-display text-[15px] sm:text-[16px] font-black text-stone-900 leading-none">
+          <div className="mt-2.5 pt-2 border-t border-stone-100/80 flex items-center justify-between gap-1">
+            <span className="font-editorial text-[16px] sm:text-[17px] font-black text-stone-900 leading-none">
               {money(item.price)}
             </span>
 
@@ -187,7 +191,7 @@ export function ItemCard({
               inCart > 0 ? (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 rounded-full bg-[#18392B] text-white px-1.5 py-0.5 shadow-xs"
+                  className="flex items-center gap-1 rounded-full bg-[#183B32] text-white px-2 py-1 shadow-sm"
                 >
                   <button
                     type="button"
@@ -195,9 +199,9 @@ export function ItemCard({
                     className="grid h-5 w-5 place-items-center rounded-full hover:bg-white/20 active:scale-90 text-white font-bold transition"
                     aria-label="Decrease"
                   >
-                    <Minus size={10} strokeWidth={2.5} />
+                    <Minus size={11} strokeWidth={2.5} />
                   </button>
-                  <span className="min-w-[12px] text-center font-display text-[11px] font-bold text-white">
+                  <span className="min-w-[14px] text-center font-editorial text-[12px] font-black text-white">
                     {inCart}
                   </span>
                   <button
@@ -206,16 +210,16 @@ export function ItemCard({
                     className="grid h-5 w-5 place-items-center rounded-full hover:bg-white/20 active:scale-90 text-white font-bold transition"
                     aria-label="Increase"
                   >
-                    <Plus size={10} strokeWidth={2.5} />
+                    <Plus size={11} strokeWidth={2.5} />
                   </button>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={handleAddClick}
-                  className="flex items-center gap-1 rounded-full bg-[#18392B] hover:bg-[#122A20] text-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider shadow-xs transition active:scale-95"
+                  className="flex items-center gap-1.5 rounded-full bg-[#183B32] hover:bg-[#122A20] text-white px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider shadow-sm transition active:scale-95 cursor-pointer"
                 >
-                  <Plus size={11} strokeWidth={3} />
+                  <ShoppingCart size={11} strokeWidth={2.5} />
                   <span>ADD</span>
                 </button>
               )

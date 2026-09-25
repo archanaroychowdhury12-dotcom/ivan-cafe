@@ -130,6 +130,17 @@ export interface StaffCall {
   resolved: boolean;
 }
 
+export interface PromoOffer {
+  enabled: boolean;
+  tag: string;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  image: string;
+  targetCategory?: string;
+  discountPercent?: number;
+}
+
 export interface Settings {
   cafeName: string;
   tagline: string;
@@ -149,6 +160,7 @@ export interface Settings {
   webhookSecret?: string;
   webhookEnabled?: boolean;
   autoPrintOrders?: boolean;
+  offer?: PromoOffer;
 }
 
 export interface OrderAuditLog {
